@@ -1,0 +1,21 @@
+{
+  "title": "Voraussichtliche Lieferung",
+  "deliverTo": "Liefern nach",
+  "orderWithin": "Bestellen Sie innerhalb von",
+  "toReceiveBy": "um zu erhalten bis",
+  "estimatedDelivery": "Voraussichtliche Lieferung",
+  "freeShipping": "Kostenloser Versand",
+  "loading": "Lieferzeiten werden geprüft…",
+  "noDataHeading": "Lieferschätzung nicht verfügbar",
+  "noDataSummary": "Für dieses Ziel konnten keine Lieferinformationen gefunden werden.",
+  "errorHeading": "Etwas ist schiefgelaufen",
+  "errorSummary": "Lieferschätzungen konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+  "editZip": "Postleitzahl eingeben",
+  "changeZip": "Ändern",
+  "applyZip": "Übernehmen",
+  "zipPlaceholder": "PLZ",
+  "dayRange": "{min}–{max} Werktage",
+  "singleDay": "{count} Werktag",
+  "tomorrow": "Morgen",
+  "today": "Heute"
+}

@@ -1,0 +1,99 @@
+name: Deploy demo pages to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Build site bundles
+        run: |
+          npm run build:site --workspace=packages/selection-guide-ui
+          npm run build:site --workspace=packages/promise-ui
+
+      - name: Assemble Pages site
+        run: |
+          mkdir -p _site/selection-guide-ui
+          mkdir -p _site/promise-ui
+
+          cp packages/selection-guide-ui/site/index.html _site/selection-guide-ui/index.html
+          cp -r packages/selection-guide-ui/site/dist _site/selection-guide-ui/dist
+          cp -r packages/selection-guide-ui/site/dev _site/selection-guide-ui/dev
+
+          cp packages/promise-ui/site/index.html _site/promise-ui/index.html
+          cp -r packages/promise-ui/site/dist _site/promise-ui/dist
+          cp -r packages/promise-ui/site/dev _site/promise-ui/dev
+
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>parcelLab Embedded UI Snippets</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 80px auto; color: #1a1a1a; }
+              a { color: #3D3AD3; }
+              ul { list-style: none; padding: 0; }
+              li { margin: 12px 0; }
+              li a { font-size: 1.1rem; font-weight: 500; }
+              li p { margin: 4px 0 0; color: #666; font-size: 0.9rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Embedded UI Snippets</h1>
+            <ul>
+              <li>
+                <a href="./selection-guide-ui/">Selection Guide UI</a>
+                <p>Size recommendation widget for product detail pages.</p>
+              </li>
+              <li>
+                <a href="./promise-ui/">Promise UI</a>
+                <p>Delivery promise widget for product and checkout pages.</p>
+              </li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,21 @@
+{
+  "title": "Estimated Delivery",
+  "deliverTo": "Deliver to",
+  "orderWithin": "Order within",
+  "toReceiveBy": "to receive by",
+  "estimatedDelivery": "Estimated delivery",
+  "freeShipping": "Free shipping",
+  "loading": "Checking delivery times…",
+  "noDataHeading": "Delivery estimate unavailable",
+  "noDataSummary": "We couldn't find delivery information for this destination.",
+  "errorHeading": "Something went wrong",
+  "errorSummary": "Unable to load delivery estimates. Please try again later.",
+  "editZip": "Enter postal code",
+  "changeZip": "Change",
+  "applyZip": "Apply",
+  "zipPlaceholder": "Postal code",
+  "dayRange": "{min}–{max} business days",
+  "singleDay": "{count} business day",
+  "tomorrow": "Tomorrow",
+  "today": "Today"
+}

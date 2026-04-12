@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "@parcellab/embedded-ui-snippets",
+  "description": "Embeddable UI widgets for parcelLab product features — lightweight, dependency-free, and ready to drop into any retailer page.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:selection-guide": "npm run dev --workspace=packages/selection-guide-ui",
+    "dev:promise": "npm run dev --workspace=packages/promise-ui",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

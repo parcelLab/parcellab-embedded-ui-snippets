@@ -1,0 +1,21 @@
+{
+  "title": "Livraison estimée",
+  "deliverTo": "Livrer à",
+  "orderWithin": "Commandez dans les",
+  "toReceiveBy": "pour recevoir d'ici le",
+  "estimatedDelivery": "Livraison estimée",
+  "freeShipping": "Livraison gratuite",
+  "loading": "Vérification des délais de livraison…",
+  "noDataHeading": "Estimation de livraison indisponible",
+  "noDataSummary": "Nous n'avons pas trouvé d'informations de livraison pour cette destination.",
+  "errorHeading": "Une erreur est survenue",
+  "errorSummary": "Impossible de charger les estimations de livraison. Veuillez réessayer plus tard.",
+  "editZip": "Entrer le code postal",
+  "changeZip": "Modifier",
+  "applyZip": "Appliquer",
+  "zipPlaceholder": "Code postal",
+  "dayRange": "{min}–{max} jours ouvrés",
+  "singleDay": "{count} jour ouvré",
+  "tomorrow": "Demain",
+  "today": "Aujourd'hui"
+}
