@@ -1,22 +1,19 @@
-name: Deploy demo pages to GitHub Pages
+name: "Demo pages: Deploy to staging"
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+env:
+  NODE_VERSION: 22
 
 jobs:
-  build:
+  push_to_s3:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -24,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
@@ -38,7 +35,7 @@ jobs:
           npm run build:site --workspace=packages/selection-guide-ui
           npm run build:site --workspace=packages/promise-ui
 
-      - name: Assemble Pages site
+      - name: Assemble demo site
         run: |
           mkdir -p _site/selection-guide-ui
           mkdir -p _site/promise-ui
@@ -82,18 +79,20 @@ jobs:
           </html>
           EOF
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: AWS - authentication
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          path: _site
+          aws-region: eu-central-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Upload to S3
+        run: |
+          aws s3 cp ./_site s3://parcellab-cdn/playground/embedded-ui-snippets \
+            --recursive \
+            --cache-control max-age=86400
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3R5S2BJQI4RDS \
+            --paths "/playground/embedded-ui-snippets/*"
