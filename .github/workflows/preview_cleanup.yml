@@ -1,0 +1,26 @@
+name: Clean up PR preview
+
+on:
+  pull_request:
+    types: [closed, unlabeled]
+
+jobs:
+  cleanup:
+    if: |
+      github.event.action == 'closed' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: AWS - authentication
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: eu-central-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Remove preview files from S3
+        run: |
+          aws s3 rm s3://parcellab-cdn/playground/selection-guide-ui/pr-${{ github.event.pull_request.number }} --recursive || true
+          aws s3 rm s3://parcellab-cdn/playground/promise-ui/pr-${{ github.event.pull_request.number }} --recursive || true
