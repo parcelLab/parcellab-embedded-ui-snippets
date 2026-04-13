@@ -1,68 +1,276 @@
-# @parcellab/selection-guide-ui
+# Selection Guide UI
 
-Embeddable size recommendation widget for retailer product detail pages. Displays fit guidance, confidence scores, and customer feedback summaries powered by the parcelLab Size Recommender API.
+Open-source reference implementation of an embeddable size recommendation widget for retailer product detail pages (PDPs). Renders fit guidance — category, bar position, confidence score, and an AI-generated customer feedback summary — powered by the [parcelLab Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender).
 
-## Usage
+Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
-### Script tag
+## Overview
+
+The widget fetches a size recommendation for a given product and account, then renders a compact, customizable UI that shows:
+
+- **Fit category** — whether the item runs small, true to size, or large
+- **Fit position bar** — a visual scale from "Runs small" to "Runs large" with a marker
+- **Confidence score** — how confident the recommendation is (e.g., "Based on 85% of reviews")
+- **Customer feedback summary** — an LLM-generated summary of customer sizing feedback
+
+It ships as a zero-dependency bundle in two formats:
+
+| Format | File | Use case |
+|--------|------|----------|
+| IIFE | `dist/size-recommender.iife.js` | `<script>` tag embeds — auto-initializes from `data-*` attributes |
+| ESM | `dist/size-recommender.esm.js` | Module bundlers and `import` consumers |
+
+## Quick Start
+
+### HTML Embed (simplest)
 
 ```html
-<div data-size-recommender
-     data-account-id="YOUR_ACCOUNT_ID"
-     data-product-id="YOUR_PRODUCT_ID">
-</div>
+<div
+  data-size-recommender
+  data-account-id="YOUR_ACCOUNT_ID"
+  data-product-id="YOUR_PRODUCT_ID"
+  data-not-found-mode="true-to-size"
+></div>
 
 <script src="https://cdn.parcellab.com/js/selection-guide-ui/v1/size-recommender.iife.js" defer></script>
 ```
 
+The IIFE build auto-initializes every `[data-size-recommender]` element on the page.
+
 ### JavaScript API
 
 ```js
-import { init } from '@parcellab/selection-guide-ui';
-
-const widget = init({
-  target: '#size-guide',
-  accountId: 123,
-  productId: 'SKU-001',
-  locale: 'en',
-  appearance: 'colored',
-  density: 'comfortable',
+const widget = window.SizeRecommender.init({
+  target: '#size-recommender',
+  accountId: 1617954,
+  productId: "Men's Iver Pants (tailored fit)",
+  locale: 'de',
+  appearance: 'neutral',
+  density: 'compact',
+  surface: 'subtle',
+  notFoundMode: 'true-to-size',
+  showPill: true,
+  showScale: true,
+  showRecommendation: true,
+  showSummary: true,
+  className: 'merchant-fit-widget',
+  theme: {
+    backgroundColor: '#f6f6f6',
+    textColor: '#222222',
+    mutedTextColor: '#666666',
+    borderColor: '#e4e4e4',
+    radius: '12px',
+  },
+  messages: {
+    title: 'How It Fits',
+    recommendationHeadingSmall: 'Consider sizing up',
+  },
 });
 
-// Update later
-widget.update({ productId: 'SKU-002' });
+// Update for a different product without re-mounting
+widget.update({ productId: "Women's New Product" });
 
-// Clean up
+// Tear down the widget
 widget.destroy();
 ```
+
+## API
+
+The widget calls the parcelLab Size Recommender API:
+
+```
+GET {apiBaseUrl}/v4/size-recommender/recommendation/{productId}/?account_id={accountId}
+```
+
+Default base URL: `https://product-api.parcellab.com`
+
+Full API documentation: [Size Recommender API Reference](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender)
+
+### Response Fields Used
+
+| Field | Description |
+|-------|-------------|
+| `size_fit_category` | Fit label (e.g. "Likely to run small") |
+| `smoothed_fit_position` | Position on the fit scale (-1 to 1) |
+| `confidence_smetabase_core` | Confidence percentage |
+| `llm_summary` | AI-generated customer feedback summary |
 
 ## Configuration
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `target` | `string \| HTMLElement` | — | CSS selector or element to mount into (required) |
-| `accountId` | `number \| string` | — | parcelLab account ID (required) |
-| `productId` | `string` | — | Product identifier (required) |
-| `locale` | `string` | `'en'` | Language code (`en`, `de`, `fr`, `it`, `es`) |
-| `appearance` | `string` | `'colored'` | Visual mode: `colored`, `neutral`, `alert` |
-| `density` | `string` | `'comfortable'` | Layout density: `comfortable`, `compact` |
-| `surface` | `string` | `'plain'` | Background: `plain` (transparent), `subtle` (filled) |
-| `notFoundMode` | `string` | `'true-to-size'` | Fallback: `true-to-size`, `empty`, `hidden` |
-| `theme` | `object` | — | Override CSS custom properties |
-| `messages` | `object` | — | Override i18n strings |
-| `showPill` | `boolean` | `true` | Show fit category pill |
-| `showScale` | `boolean` | `true` | Show fit scale visualization |
-| `showRecommendation` | `boolean` | `true` | Show recommendation heading |
-| `showSummary` | `boolean` | `true` | Show summary text |
+| `target` | `string \| HTMLElement` | — | **Required** for JS init. CSS selector or DOM element. |
+| `accountId` | `number \| string` | — | **Required.** parcelLab account identifier. |
+| `productId` | `string` | — | **Required.** Product identifier passed to the API. |
+| `articleName` | `string` | — | Legacy alias for `productId`. Still accepted for backwards compatibility. |
+| `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
+| `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
+| `notFoundMode` | `'empty' \| 'true-to-size' \| 'hidden'` | `'true-to-size'` | Behavior when the API returns 404. |
+| `apiBaseUrl` | `string` | `'https://product-api.parcellab.com'` | Override the API base URL. |
+| `appearance` | `'neutral' \| 'colored' \| 'alert'` | `'colored'` | `neutral` is grayscale; `colored` uses gradient track; `alert` uses warning tones. |
+| `density` | `'compact' \| 'comfortable'` | `'comfortable'` | `compact` suits PDP sidebars; `comfortable` adds more spacing. |
+| `surface` | `'subtle' \| 'plain'` | `'plain'` | `subtle` renders a bordered card; `plain` renders inline. |
+| `showPill` | `boolean` | `true` | Show or hide the fit category pill badge. |
+| `showScale` | `boolean` | `true` | Show or hide the fit position scale bar. |
+| `showRecommendation` | `boolean` | `true` | Show or hide the recommendation callout. |
+| `showSummary` | `boolean` | `true` | Show or hide the LLM summary within the recommendation. |
+| `className` | `string` | — | Extra CSS class added to the root element. |
+| `theme` | `Partial<WidgetTheme>` | — | CSS token overrides (colors, radius, etc.). |
+
+### HTML Data Attributes
+
+When using the IIFE auto-init, configure via `data-*` attributes:
+
+```html
+<div
+  data-size-recommender
+  data-account-id="1617954"
+  data-product-id="Men's Iver Pants (tailored fit)"
+  data-not-found-mode="true-to-size"
+  data-appearance="colored"
+  data-density="comfortable"
+  data-surface="plain"
+  data-locale="de"
+  data-show-pill="true"
+  data-show-scale="true"
+  data-show-recommendation="true"
+  data-show-summary="false"
+  data-messages='{"title":"How It Fits"}'
+  data-theme='{"backgroundColor":"#f6f6f6","radius":"12px"}'
+  data-class-name="my-custom-class"
+></div>
+```
+
+## 404 Handling
+
+When a product has no recommendation data, the widget supports three modes:
+
+- **`true-to-size`** (default) — renders a "likely true to size" fallback without confidence or summary
+- **`empty`** — shows a "no data available" message
+- **`hidden`** — hides the widget entirely (`display: none`); the widget reappears when valid data is provided via `update()` or `refresh()`
+
+## Styling
+
+The widget renders in **light DOM** (not Shadow DOM), so host-page typography inherits naturally and you can target the markup directly with CSS.
+
+### Root Classes
+
+```
+.pl-size-recommender
+.pl-size-recommender--{neutral|colored|alert}
+.pl-size-recommender--density-{compact|comfortable}
+.pl-size-recommender--surface-{subtle|plain}
+.pl-size-recommender--state-{loading|ready|fallback-true|empty|error|hidden}
+.pl-size-recommender--fit-{small|true|large|unknown}
+```
+
+### Element Classes
+
+```
+.pl-size-recommender__header                  — header row (title + pill)
+.pl-size-recommender__title                   — "How It Fits" heading
+.pl-size-recommender__pill                    — fit category badge
+.pl-size-recommender__scale                   — scale container (labels + track)
+.pl-size-recommender__scale-labels            — "Runs Small / True to Size / Runs Large"
+.pl-size-recommender__track                   — the horizontal fit bar
+.pl-size-recommender__marker                  — position dot on the track
+.pl-size-recommender__recommendation          — recommendation callout card
+.pl-size-recommender__recommendation-heading  — recommendation title
+.pl-size-recommender__recommendation-summary  — AI-generated summary text
+.pl-size-recommender__confidence              — confidence score line
+.pl-size-recommender__loading                 — loading spinner state
+```
+
+### CSS Overrides
+
+```css
+/* Hide the AI summary text */
+.pl-size-recommender__recommendation-summary { display: none; }
+
+/* Hide the fit category pill badge */
+.pl-size-recommender__pill { display: none; }
+
+/* Hide the entire scale bar */
+.pl-size-recommender__scale { display: none; }
+
+/* Hide the widget entirely when in empty/no-data state */
+.pl-size-recommender--state-empty { display: none; }
+```
+
+### CSS Variables
+
+Override these on `.pl-size-recommender` or any ancestor:
+
+| Variable | Description |
+|----------|-------------|
+| `--plsr-background` | Widget background color |
+| `--plsr-recommendation-background` | Recommendation callout background |
+| `--plsr-border` | Border color |
+| `--plsr-text` | Primary text color |
+| `--plsr-muted-text` | Secondary / muted text color |
+| `--plsr-accent` | Accent color for highlights |
+| `--plsr-badge-background` | Fit category badge background |
+| `--plsr-badge-text` | Fit category badge text color |
+| `--plsr-track` | Scale track color (neutral mode) |
+| `--plsr-track-start` | Track gradient start (colored mode) |
+| `--plsr-track-end` | Track gradient end (colored mode) |
+| `--plsr-radius` | Border radius |
+
+## Widget Instance API
+
+The `init()` call returns a `WidgetInstance` with these methods:
+
+| Method | Description |
+|--------|-------------|
+| `update(config)` | Update configuration and re-fetch. Cancels any in-flight request. |
+| `refresh()` | Re-fetch with current configuration. |
+| `destroy()` | Remove the widget from the DOM and clean up. |
 
 ## Development
 
 ```bash
-npm run dev    # Start dev server at localhost:4173
-npm run build  # Build ESM + IIFE bundles
-npm test       # Run tests
+npm install    # from monorepo root
+npm run dev    # starts dev server at localhost:4173
 ```
+
+Opens a demo page with interactive controls for product ID, account ID, appearance, density, surface, and 404 mode. The demo generates copyable embed snippets for both HTML and JS integration styles.
+
+### Build
+
+```bash
+npm run build
+```
+
+Produces `dist/size-recommender.iife.js` and `dist/size-recommender.esm.js` with TypeScript type declarations in `dist/types/`.
+
+### Test
+
+```bash
+npm test
+```
+
+Runs the Vitest test suite with jsdom.
+
+### Deployment
+
+The project deploys to S3/CloudFront via GitHub Actions:
+
+- **Staging:** automatically deployed on push to `main` (when files in `packages/selection-guide-ui/` change)
+- **Production:** deployed on GitHub release with tag `selection-guide-ui/<version>`
+
+## Building Your Own
+
+This widget is an open-source reference implementation. If you need a custom integration:
+
+1. **Use the API directly** — call the [Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) from your own frontend code and render the response however you like.
+2. **Fork this repo** — start from this codebase and customize the rendering, styling, and behavior to match your exact requirements.
+3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your design system.
+
+## Related
+
+- [Size Recommender API Reference](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) — full API documentation
+- [Promise UI](../promise-ui/) — companion widget for delivery date estimates
 
 ## License
 
-MIT
+[MIT](LICENSE)
