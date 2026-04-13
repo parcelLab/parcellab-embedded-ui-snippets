@@ -1,0 +1,21 @@
+{
+  "title": "Consegna stimata",
+  "deliverTo": "Consegna a",
+  "orderWithin": "Ordina entro",
+  "toReceiveBy": "per ricevere entro il",
+  "estimatedDelivery": "Consegna stimata",
+  "freeShipping": "Spedizione gratuita",
+  "loading": "Controllo dei tempi di consegna…",
+  "noDataHeading": "Stima di consegna non disponibile",
+  "noDataSummary": "Non siamo riusciti a trovare informazioni di consegna per questa destinazione.",
+  "errorHeading": "Qualcosa è andato storto",
+  "errorSummary": "Impossibile caricare le stime di consegna. Riprova più tardi.",
+  "editZip": "Inserisci il CAP",
+  "changeZip": "Modifica",
+  "applyZip": "Applica",
+  "zipPlaceholder": "CAP",
+  "dayRange": "{min}–{max} giorni lavorativi",
+  "singleDay": "{count} giorno lavorativo",
+  "tomorrow": "Domani",
+  "today": "Oggi"
+}

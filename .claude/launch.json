@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "promise-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4174,
+      "autoPort": true,
+      "cwd": "packages/promise-ui"
+    },
+    {
+      "name": "selection-guide-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4173,
+      "autoPort": true,
+      "cwd": "packages/selection-guide-ui"
+    }
+  ]
+}

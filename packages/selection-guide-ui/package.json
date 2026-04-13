@@ -1,0 +1,35 @@
+{
+  "name": "@parcellab/selection-guide-ui",
+  "version": "0.1.6",
+  "description": "Embeddable size recommendation widget for retailer product detail pages. Displays fit guidance, confidence scores, and customer feedback summaries powered by the parcelLab Size Recommender API.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parcelLab/parcellab-embedded-ui-snippets.git",
+    "directory": "packages/selection-guide-ui"
+  },
+  "homepage": "https://parcellab.github.io/parcellab-embedded-ui-snippets/selection-guide-ui/",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/size-recommender.esm.js",
+      "default": "./dist/size-recommender.iife.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && node scripts/build.mjs && tsc -p tsconfig.types.json",
+    "build:site": "node scripts/build-site.mjs",
+    "dev": "node scripts/dev.mjs",
+    "test": "vitest run --environment jsdom"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.1",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8"
+  }
+}

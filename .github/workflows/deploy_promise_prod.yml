@@ -1,0 +1,67 @@
+name: "Promise UI: Deploy to prod"
+
+on:
+  release:
+    types: [published]
+
+defaults:
+  run:
+    working-directory: packages/promise-ui
+
+jobs:
+  push_to_s3:
+    if: startsWith(github.event.release.tag_name, 'promise-ui/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build
+        run: |
+          npm run build
+          npm run build:site
+
+      - name: AWS - authentication
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: eu-central-1
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Upload versioned files to S3
+        run: |
+          aws s3 cp ./dist s3://parcellab-cdn/apps/promise-ui/v1/${{ github.event.release.tag_name }} \
+            --recursive \
+            --cache-control max-age=86400
+
+      - name: Upload latest plugin files to S3
+        run: |
+          aws s3 cp ./dist s3://parcellab-cdn/js/promise-ui/v1 \
+            --recursive \
+            --cache-control max-age=86400
+
+      - name: Upload demo page to S3
+        run: |
+          aws s3 cp ./site s3://parcellab-cdn/apps/promise-ui/v1/demo \
+            --recursive \
+            --cache-control max-age=86400
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3R5S2BJQI4RDS \
+            --paths "/js/promise-ui/v1/*" "/apps/promise-ui/v1/*"
