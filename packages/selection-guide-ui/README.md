@@ -4,6 +4,29 @@ Open-source reference implementation of an embeddable size recommendation widget
 
 Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
+**[Live demo](https://cdn.parcellab.com/playground/selection-guide-ui/)**
+
+**Sample with short info text**
+
+| | |
+| :---: | :---: |
+| ![Short text, neutral](screenshots/shorttext_neutral_comfortable_inline.png) | ![Short text, colored](screenshots/shorttext_colored_compact_card.png) |
+| neutral color, comfortable spacing, inline display | colored, compact spacing, card display |
+
+**Sample with longer info text**
+
+| | |
+| :---: | :---: |
+| ![Long text, neutral](screenshots/longtext_neutral_compact_inline.png) | ![Long text, colored](screenshots/longtext_colored_compact_card.png) |
+| neutral color, compact spacing, inline display | colored, compact spacing, card display |
+
+**Missing data**
+
+| | |
+| :---: | :---: |
+| ![Empty state, show default](screenshots/emptystate_show-default.png) | ![Empty state, show missing](screenshots/emptystate_show-missing.png) |
+| `notFoundMode: 'true-to-size'` — shows default fit info | `notFoundMode: 'empty'` — shows missing data notice |
+
 ## Overview
 
 The widget fetches a size recommendation for a given product and account, then renders a compact, customizable UI that shows:
@@ -16,7 +39,7 @@ The widget fetches a size recommendation for a given product and account, then r
 It ships as a zero-dependency bundle in two formats:
 
 | Format | File | Use case |
-|--------|------|----------|
+| --- | --- | --- |
 | IIFE | `dist/size-recommender.iife.js` | `<script>` tag embeds — auto-initializes from `data-*` attributes |
 | ESM | `dist/size-recommender.esm.js` | Module bundlers and `import` consumers |
 
@@ -59,12 +82,12 @@ const widget = window.SizeRecommender.init({
     textColor: '#222222',
     mutedTextColor: '#666666',
     borderColor: '#e4e4e4',
-    radius: '12px',
+    radius: '12px'
   },
   messages: {
     title: 'How It Fits',
-    recommendationHeadingSmall: 'Consider sizing up',
-  },
+    recommendationHeadingSmall: 'Consider sizing up'
+  }
 });
 
 // Update for a different product without re-mounting
@@ -89,8 +112,8 @@ Full API documentation: [Size Recommender API Reference](https://product-api.par
 ### Response Fields Used
 
 | Field | Description |
-|-------|-------------|
-| `size_fit_category` | Fit label (e.g. "Likely to run small") |
+| --- | --- |
+| `size_fit_category` | Fit label (e.g., "Likely to run small") |
 | `smoothed_fit_position` | Position on the fit scale (-1 to 1) |
 | `confidence_smetabase_core` | Confidence percentage |
 | `llm_summary` | AI-generated customer feedback summary |
@@ -98,23 +121,23 @@ Full API documentation: [Size Recommender API Reference](https://product-api.par
 ## Configuration
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `target` | `string \| HTMLElement` | — | **Required** for JS init. CSS selector or DOM element. |
-| `accountId` | `number \| string` | — | **Required.** parcelLab account identifier. |
-| `productId` | `string` | — | **Required.** Product identifier passed to the API. |
+| `accountId` | `number \| string` | — | **Required**. parcelLab account identifier. |
+| `productId` | `string` | — | **Required**. Product identifier passed to the API. |
 | `articleName` | `string` | — | Legacy alias for `productId`. Still accepted for backwards compatibility. |
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
-| `notFoundMode` | `'empty' \| 'true-to-size' \| 'hidden'` | `'true-to-size'` | Behavior when the API returns 404. |
+| `notFoundMode` | `'empty' \| 'true-to-size' \| 'hidden'` | `'empty'` | Behavior when the API returns 404. `hidden` hides the widget entirely. |
 | `apiBaseUrl` | `string` | `'https://product-api.parcellab.com'` | Override the API base URL. |
-| `appearance` | `'neutral' \| 'colored' \| 'alert'` | `'colored'` | `neutral` is grayscale; `colored` uses gradient track; `alert` uses warning tones. |
-| `density` | `'compact' \| 'comfortable'` | `'comfortable'` | `compact` suits PDP sidebars; `comfortable` adds more spacing. |
-| `surface` | `'subtle' \| 'plain'` | `'plain'` | `subtle` renders a bordered card; `plain` renders inline. |
+| `appearance` | `'neutral' \| 'colored'` | `'neutral'` | `neutral` is grayscale; `colored` uses gradient track. |
+| `density` | `'compact' \| 'comfortable'` | `'compact'` | `compact` suits PDP sidebars; `comfortable` adds more spacing. |
+| `surface` | `'subtle' \| 'plain'` | `'subtle'` | `subtle` renders a light card; `plain` renders inline. |
 | `showPill` | `boolean` | `true` | Show or hide the fit category pill badge. |
 | `showScale` | `boolean` | `true` | Show or hide the fit position scale bar. |
-| `showRecommendation` | `boolean` | `true` | Show or hide the recommendation callout. |
+| `showRecommendation` | `boolean` | `true` | Show or hide the entire recommendation box. |
 | `showSummary` | `boolean` | `true` | Show or hide the LLM summary within the recommendation. |
-| `className` | `string` | — | Extra CSS class added to the root element. |
+| `className` | `string` | — | Extra CSS classes added to the root element. |
 | `theme` | `Partial<WidgetTheme>` | — | CSS token overrides (colors, radius, etc.). |
 
 ### HTML Data Attributes
@@ -145,8 +168,8 @@ When using the IIFE auto-init, configure via `data-*` attributes:
 
 When a product has no recommendation data, the widget supports three modes:
 
-- **`true-to-size`** (default) — renders a "likely true to size" fallback without confidence or summary
-- **`empty`** — shows a "no data available" message
+- **`empty`** (default) — shows a "no data available" message
+- **`true-to-size`** — renders a "likely true to size" fallback without confidence or summary
 - **`hidden`** — hides the widget entirely (`display: none`); the widget reappears when valid data is provided via `update()` or `refresh()`
 
 ## Styling
@@ -157,7 +180,7 @@ The widget renders in **light DOM** (not Shadow DOM), so host-page typography in
 
 ```
 .pl-size-recommender
-.pl-size-recommender--{neutral|colored|alert}
+.pl-size-recommender--{neutral|colored}
 .pl-size-recommender--density-{compact|comfortable}
 .pl-size-recommender--surface-{subtle|plain}
 .pl-size-recommender--state-{loading|ready|fallback-true|empty|error|hidden}
@@ -175,15 +198,21 @@ The widget renders in **light DOM** (not Shadow DOM), so host-page typography in
 .pl-size-recommender__track                   — the horizontal fit bar
 .pl-size-recommender__marker                  — position dot on the track
 .pl-size-recommender__recommendation          — recommendation callout card
-.pl-size-recommender__recommendation-heading  — recommendation title
-.pl-size-recommender__recommendation-summary  — AI-generated summary text
-.pl-size-recommender__confidence              — confidence score line
-.pl-size-recommender__loading                 — loading spinner state
+.pl-size-recommender__recommendation-header   — header row inside recommendation
+.pl-size-recommender__recommendation-icon     — fit direction icon (↑/↓/−)
+.pl-size-recommender__recommendation-title    — e.g., "Consider sizing up"
+.pl-size-recommender__recommendation-meta     — confidence text
+.pl-size-recommender__recommendation-summary  — AI-generated feedback summary
 ```
 
-### CSS Overrides
+### Hiding Elements
+
+Use `display: none` on any element class to hide specific parts:
 
 ```css
+/* Hide the confidence score */
+.pl-size-recommender__recommendation-meta { display: none; }
+
 /* Hide the AI summary text */
 .pl-size-recommender__recommendation-summary { display: none; }
 
@@ -202,12 +231,12 @@ The widget renders in **light DOM** (not Shadow DOM), so host-page typography in
 Override these on `.pl-size-recommender` or any ancestor:
 
 | Variable | Description |
-|----------|-------------|
+| --- | --- |
 | `--plsr-background` | Widget background color |
 | `--plsr-recommendation-background` | Recommendation callout background |
 | `--plsr-border` | Border color |
 | `--plsr-text` | Primary text color |
-| `--plsr-muted-text` | Secondary / muted text color |
+| `--plsr-muted-text` | Secondary/muted text color |
 | `--plsr-accent` | Accent color for highlights |
 | `--plsr-badge-background` | Fit category badge background |
 | `--plsr-badge-text` | Fit category badge text color |
@@ -221,31 +250,31 @@ Override these on `.pl-size-recommender` or any ancestor:
 The `init()` call returns a `WidgetInstance` with these methods:
 
 | Method | Description |
-|--------|-------------|
+| --- | --- |
 | `update(config)` | Update configuration and re-fetch. Cancels any in-flight request. |
 | `refresh()` | Re-fetch with current configuration. |
 | `destroy()` | Remove the widget from the DOM and clean up. |
 
 ## Development
 
-```bash
-npm install    # from monorepo root
-npm run dev    # starts dev server at localhost:4173
+```sh
+npm install
+npm run dev
 ```
 
-Opens a demo page with interactive controls for product ID, account ID, appearance, density, surface, and 404 mode. The demo generates copyable embed snippets for both HTML and JS integration styles.
+Opens a demo page at [http://localhost:4173](http://localhost:4173) with interactive controls for product ID, account ID, appearance, density, surface, and 404 mode. The demo generates copyable embed snippets for both HTML and JS integration styles.
 
 ### Build
 
-```bash
+```sh
 npm run build
 ```
 
-Produces `dist/size-recommender.iife.js` and `dist/size-recommender.esm.js` with TypeScript type declarations in `dist/types/`.
+Produces `dist/size-recommender.iife.js` and `dist/size-recommender.esm.js` with TypeScript type definitions.
 
 ### Test
 
-```bash
+```sh
 npm test
 ```
 
@@ -255,22 +284,31 @@ Runs the Vitest test suite with jsdom.
 
 The project deploys to S3/CloudFront via GitHub Actions:
 
-- **Staging:** automatically deployed on push to `main` (when files in `packages/selection-guide-ui/` change)
-- **Production:** deployed on GitHub release with tag `selection-guide-ui/<version>`
+- **Staging:** automatically deployed on push to `main` to `s3://parcellab-cdn/playground/selection-guide-ui/`
+- **Production:** deployed on GitHub release to `s3://parcellab-cdn/js/selection-guide-ui/v1/` (latest) and `s3://parcellab-cdn/apps/selection-guide-ui/v1/{tag}/` (versioned)
+
+Build the demo site locally:
+
+```sh
+npm run build
+npm run build:site
+```
 
 ## Building Your Own
 
-This widget is an open-source reference implementation. If you need a custom integration:
+This widget is an open-source reference implementation. If you need a custom integration, you can:
 
 1. **Use the API directly** — call the [Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) from your own frontend code and render the response however you like.
 2. **Fork this repo** — start from this codebase and customize the rendering, styling, and behavior to match your exact requirements.
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your design system.
 
+The source code in `src/` is organized into clear modules (API client, config resolution, model transformation, rendering) that you can reference or reuse.
+
 ## Related
 
 - [Size Recommender API Reference](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) — full API documentation
-- [Promise UI](../promise-ui/) — companion widget for delivery date estimates
+- [selection-guide](https://github.com/parcelLab/selection-guide) — backend service powering the size recommendations (parcelLab internal)
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — Copyright (c) 2026 Julian Krenge
