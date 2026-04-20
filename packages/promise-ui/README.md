@@ -4,6 +4,8 @@ Open-source reference implementation of an embeddable delivery promise widget fo
 
 Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
+**[Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)**
+
 ## Overview
 
 The widget fetches delivery predictions for a given destination and account, then renders a compact, customizable UI that shows:

@@ -15,7 +15,7 @@ Size recommendation widget for product detail pages. Renders fit guidance — ca
 <script src="https://cdn.parcellab.com/js/selection-guide-ui/v1/size-recommender.iife.js" defer></script>
 ```
 
-[Source](./packages/selection-guide-ui/) · [Full documentation](./packages/selection-guide-ui/README.md)
+[Source](./packages/selection-guide-ui/) · [Docs](./packages/selection-guide-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/selection-guide-ui/index.html)
 
 ---
 
@@ -28,7 +28,7 @@ Delivery promise widget for product and checkout pages. Shows estimated delivery
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
 
-[Source](./packages/promise-ui/) · [Full documentation](./packages/promise-ui/README.md)
+[Source](./packages/promise-ui/) · [Docs](./packages/promise-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)
 
 ## Development
 

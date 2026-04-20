@@ -4,7 +4,7 @@ Open-source reference implementation of an embeddable size recommendation widget
 
 Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
-**[Live demo](https://cdn.parcellab.com/playground/selection-guide-ui/)**
+**[Live demo](https://cdn.parcellab.com/playground/selection-guide-ui/index.html)**
 
 **Sample with short info text**
 
