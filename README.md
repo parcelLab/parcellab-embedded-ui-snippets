@@ -8,7 +8,7 @@ Use these widgets as-is, or as starting points for building your own custom inte
 
 ### [Selection Guide UI](./packages/selection-guide-ui/)
 
-Size recommendation widget for product detail pages. Renders fit guidance — category, bar position, confidence score, and an AI-generated customer feedback summary — powered by the [parcelLab Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender).
+Size recommendation widget for product detail pages. Renders fit guidance — category, bar position, confidence score, and an AI-generated customer feedback summary — powered by the [parcelLab Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender).
 
 ```html
 <div data-size-recommender data-account-id="YOUR_ACCOUNT_ID" data-product-id="YOUR_PRODUCT_ID"></div>
@@ -81,7 +81,7 @@ Bundles are distributed via S3 + CloudFront. GitHub Actions handle everything:
 
 These widgets are open-source reference implementations. If you need a custom integration:
 
-1. **Use the APIs directly** — call the [Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API](https://docs.parcellab.com/docs/developers/promise/api) from your own frontend and render the response however you like
+1. **Use the APIs directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API](https://docs.parcellab.com/docs/developers/promise/api) from your own frontend and render the response however you like
 2. **Fork and customize** — start from this codebase and modify the rendering, styling, and behavior to match your design system
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your needs
 

@@ -1,6 +1,6 @@
 # Selection Guide UI
 
-Open-source reference implementation of an embeddable size recommendation widget for retailer product detail pages (PDPs). Renders fit guidance — category, bar position, confidence score, and an AI-generated customer feedback summary — powered by the [parcelLab Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender).
+Open-source reference implementation of an embeddable size recommendation widget for retailer product detail pages (PDPs). Renders fit guidance — category, bar position, confidence score, and an AI-generated customer feedback summary — powered by the [parcelLab Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender).
 
 Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
@@ -105,9 +105,9 @@ The widget calls the parcelLab Size Recommender API:
 GET {apiBaseUrl}/v4/size-recommender/recommendation/{productId}/?account_id={accountId}
 ```
 
-Default base URL: `https://product-api.parcellab.com`
+Default base URL: `https://api.parcellab.com`
 
-Full API documentation: [Size Recommender API Reference](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender)
+Full API documentation: [Size Recommender API Reference](https://api.parcellab.com/v4/docs/#tag/Size-Recommender)
 
 ### Response Fields Used
 
@@ -129,7 +129,7 @@ Full API documentation: [Size Recommender API Reference](https://product-api.par
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
 | `notFoundMode` | `'empty' \| 'true-to-size' \| 'hidden'` | `'empty'` | Behavior when the API returns 404. `hidden` hides the widget entirely. |
-| `apiBaseUrl` | `string` | `'https://product-api.parcellab.com'` | Override the API base URL. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Override the API base URL. |
 | `appearance` | `'neutral' \| 'colored'` | `'neutral'` | `neutral` is grayscale; `colored` uses gradient track. |
 | `density` | `'compact' \| 'comfortable'` | `'compact'` | `compact` suits PDP sidebars; `comfortable` adds more spacing. |
 | `surface` | `'subtle' \| 'plain'` | `'subtle'` | `subtle` renders a light card; `plain` renders inline. |
@@ -298,7 +298,7 @@ npm run build:site
 
 This widget is an open-source reference implementation. If you need a custom integration, you can:
 
-1. **Use the API directly** — call the [Size Recommender API](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) from your own frontend code and render the response however you like.
+1. **Use the API directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) from your own frontend code and render the response however you like.
 2. **Fork this repo** — start from this codebase and customize the rendering, styling, and behavior to match your exact requirements.
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your design system.
 
@@ -306,7 +306,7 @@ The source code in `src/` is organized into clear modules (API client, config re
 
 ## Related
 
-- [Size Recommender API Reference](https://product-api.parcellab.com/v4/docs/#tag/Size-Recommender) — full API documentation
+- [Size Recommender API Reference](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) — full API documentation
 - [selection-guide](https://github.com/parcelLab/selection-guide) — backend service powering the size recommendations (parcelLab internal)
 
 ## License

@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 const DEFAULT_API_BASE_URL =
-  'https://product-api.parcellab.com';
+  'https://api.parcellab.com';
 
 function resolveTarget(target: WidgetInitOptions['target']): HTMLElement {
   if (typeof target === 'string') {
