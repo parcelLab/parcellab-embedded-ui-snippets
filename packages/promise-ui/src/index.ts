@@ -1,31 +1,43 @@
 import { autoInit, initWidget } from './widget';
 import type {
+  CarrierDisplay,
+  Confidence,
   CutoffUrgency,
-  DensityMode,
+  CutoffVisibility,
+  DateFormat,
+  DateMode,
+  FallbackDays,
+  IconKind,
   LayoutMode,
-  SurfaceMode,
   WidgetConfig,
   WidgetInitOptions,
   WidgetInstance,
   WidgetMessages,
   WidgetTheme,
   WidgetUpdateOptions,
+  ZipPickerMode,
 } from './types';
 
 declare const __AUTO_INIT__: boolean;
 declare const __VERSION__: string;
 
 export type {
+  CarrierDisplay,
+  Confidence,
   CutoffUrgency,
-  DensityMode,
+  CutoffVisibility,
+  DateFormat,
+  DateMode,
+  FallbackDays,
+  IconKind,
   LayoutMode,
-  SurfaceMode,
   WidgetConfig,
   WidgetInitOptions,
   WidgetInstance,
   WidgetMessages,
   WidgetTheme,
   WidgetUpdateOptions,
+  ZipPickerMode,
 };
 
 export function init(config: WidgetInitOptions): WidgetInstance {

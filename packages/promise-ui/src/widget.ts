@@ -1,6 +1,6 @@
 import { fetchPrediction } from './api';
 import { readConfigFromElement, resolveConfig } from './config';
-import { handleFetchError, readyViewModel } from './model';
+import { handleFetchError, linkViewModel, readyViewModel } from './model';
 import { WidgetRenderer } from './render';
 import type {
   ResolvedWidgetConfig,
@@ -43,6 +43,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
   private renderer: WidgetRenderer;
   private abortController: AbortController | null = null;
   private requestId = 0;
+  private destroyed = false;
 
   constructor(input: WidgetInitOptions) {
     this.input = { ...input };
@@ -70,10 +71,18 @@ export class DeliveryPromiseWidget implements WidgetInstance {
   }
 
   async refresh(): Promise<void> {
+    if (this.destroyed) return;
     this.requestId += 1;
     const currentRequestId = this.requestId;
     this.abortController?.abort();
     this.abortController = new AbortController();
+
+    // requireZip without a postal code: show CTA, skip API call entirely
+    if (this.config.requireZip && !this.config.postalCode) {
+      this.renderer.render(this.config, linkViewModel(this.config));
+      return;
+    }
+
     this.renderer.render(this.config, loadingViewModel(this.config));
 
     try {
@@ -82,7 +91,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
         this.abortController.signal,
       );
 
-      if (currentRequestId !== this.requestId) {
+      if (this.destroyed || currentRequestId !== this.requestId) {
         return;
       }
 
@@ -92,7 +101,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
         return;
       }
 
-      if (currentRequestId !== this.requestId) {
+      if (this.destroyed || currentRequestId !== this.requestId) {
         return;
       }
 
@@ -115,6 +124,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.abortController?.abort();
     registry.delete(this.config.target);
     this.renderer.destroy();

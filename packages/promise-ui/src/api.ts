@@ -18,6 +18,7 @@ function cacheKey(config: ResolvedWidgetConfig): string {
     config.calibration,
     config.tag,
     config.draft,
+    config.locale,
   ].join('|');
 }
 
