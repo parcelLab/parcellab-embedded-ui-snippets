@@ -46,210 +46,182 @@
         background-position: right 12px center;
         padding-right: 36px;
       }
+      .preset-active {
+        border-color: #10203c !important;
+        background-color: #10203c !important;
+        color: #fff !important;
+      }
+      .field-row { display: grid; gap: 4px; font-size: 0.875rem; font-weight: 600; color: #41536f; }
+      .field-row > input,
+      .field-row > select { font-weight: 400; color: #10203c; }
     </style>
   </head>
   <body class="bg-navy-50 text-navy-800 min-h-screen">
-    <main class="max-w-[920px] mx-auto px-5 py-10 pb-20">
-      <div class="grid gap-6 items-start grid-cols-1 md:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
+    <main class="max-w-[1480px] mx-auto px-5 py-10 pb-20">
+      <header class="mb-6">
+        <h1 class="text-xl font-semibold">Promise UI — Dev Demo</h1>
+        <p class="text-sm text-navy-500 mt-1">Delivery date widget for product, cart, and checkout surfaces. Toned-down by default.</p>
+      </header>
 
-        <!-- Controls -->
-        <section class="bg-white border border-navy-200/60 rounded-xl p-5 space-y-4">
-          <h2 class="text-base font-semibold">Configuration</h2>
+      <div class="grid gap-6 items-start grid-cols-1 lg:grid-cols-[minmax(300px,340px)_minmax(300px,340px)_minmax(0,1fr)]">
 
-          <div class="space-y-3.5">
-            <div>
-              <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-2">Quick start</div>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  class="text-xs font-semibold px-3 h-8 rounded-lg border border-navy-200 bg-navy-50 text-navy-500 hover:bg-navy-100 transition-colors cursor-pointer"
-                  data-sample="deu"
-                  type="button"
-                >
-                  Germany
-                </button>
-                <button
-                  class="text-xs font-semibold px-3 h-8 rounded-lg border border-navy-200 bg-navy-50 text-navy-500 hover:bg-navy-100 transition-colors cursor-pointer"
-                  data-sample="usa"
-                  type="button"
-                >
-                  USA
-                </button>
-                <button
-                  class="text-xs font-semibold px-3 h-8 rounded-lg border border-navy-200 bg-navy-50 text-navy-500 hover:bg-navy-100 transition-colors cursor-pointer"
-                  data-sample="usa-home"
-                  type="button"
-                >
-                  USA (home delivery)
-                </button>
-              </div>
-            </div>
+        <!-- Column 1: data presets, connection, api filters -->
+        <section class="bg-white border border-navy-200/60 rounded-xl p-5 space-y-5">
+          <div>
+            <h2 class="text-base font-semibold mb-3">Data</h2>
+            <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-2">Data presets</div>
+            <div id="data-preset-list" class="flex flex-wrap gap-2"></div>
+          </div>
 
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
+          <fieldset class="space-y-2">
+            <legend class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Connection</legend>
+            <label class="field-row">
               Account ID
-              <input
-                id="account-id"
-                name="accountId"
-                inputmode="numeric"
-                value="1612197"
-                class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              />
+              <input id="account-id" value="1612197" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
+            <label class="field-row">
               Country (ISO3)
-              <input
-                id="country"
-                name="destinationCountry"
-                value="DEU"
-                class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              />
+              <input id="country" value="DEU" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-              Postal Code
-              <input
-                id="postal-code"
-                name="postalCode"
-                value=""
-                placeholder="Optional"
-                class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              />
+            <label class="field-row">
+              Postal code (optional)
+              <input id="postal-code" value="" placeholder="Leave empty for country-level" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
+          </fieldset>
 
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-              Language
-              <select
-                id="locale"
-                name="locale"
-                class="field bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              >
-                <option value="en">English</option>
-                <option value="de">Deutsch</option>
-                <option value="fr">Francais</option>
-                <option value="it">Italiano</option>
-                <option value="es">Espanol</option>
-              </select>
+          <fieldset class="space-y-2">
+            <legend class="text-xs font-semibold text-navy-500 uppercase tracking-wide">API filters</legend>
+            <label class="field-row">
+              Courier slug
+              <input id="courier" value="" placeholder="e.g. dhl-germany" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-              Layout
-              <select
-                id="layout"
-                name="layout"
-                class="field bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              >
-                <option value="list" selected>List</option>
-                <option value="compact">Compact</option>
-                <option value="banner">Banner</option>
-              </select>
+            <label class="field-row">
+              Service level
+              <input id="service-level" value="" placeholder="e.g. home-delivery, express" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-              Density
-              <select
-                id="density"
-                name="density"
-                class="field bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              >
-                <option value="compact">Compact</option>
-                <option value="comfortable" selected>Comfortable</option>
-              </select>
+            <label class="field-row">
+              Warehouse
+              <input id="warehouse" value="" placeholder="Optional" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-
-            <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-              Surface
-              <select
-                id="surface"
-                name="surface"
-                class="field bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-              >
-                <option value="subtle">Subtle card</option>
-                <option value="plain" selected>Plain inline</option>
-              </select>
-            </label>
-
-            <fieldset class="space-y-2">
-              <legend class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Visibility</legend>
-              <label class="flex items-center gap-2 text-sm text-navy-700 cursor-pointer">
-                <input type="checkbox" id="show-cutoff" checked class="accent-navy-800" />
-                Show cutoff urgency
-              </label>
-              <label class="flex items-center gap-2 text-sm text-navy-700 cursor-pointer">
-                <input type="checkbox" id="show-courier" checked class="accent-navy-800" />
-                Show courier name
-              </label>
-              <label class="flex items-center gap-2 text-sm text-navy-700 cursor-pointer">
-                <input type="checkbox" id="show-date-range" checked class="accent-navy-800" />
-                Show date range
-              </label>
-              <label class="flex items-center gap-2 text-sm text-navy-700 cursor-pointer">
-                <input type="checkbox" id="show-icon" checked class="accent-navy-800" />
-                Show icon
-              </label>
-              <label class="flex items-center gap-2 text-sm text-navy-700 cursor-pointer">
-                <input type="checkbox" id="zip-editable" class="accent-navy-800" />
-                Zip editable
-              </label>
-            </fieldset>
-
-            <fieldset class="space-y-2">
-              <legend class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Filters (optional)</legend>
-              <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-                Courier
-                <input
-                  id="courier"
-                  name="courier"
-                  value=""
-                  placeholder="e.g. dhl-germany"
-                  class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-                />
-              </label>
-              <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-                Service Level
-                <input
-                  id="service-level"
-                  name="serviceLevel"
-                  value=""
-                  placeholder="e.g. home-delivery"
-                  class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-                />
-              </label>
-              <label class="grid gap-1.5 text-sm font-semibold text-navy-500">
-                Warehouse
-                <input
-                  id="warehouse"
-                  name="warehouse"
-                  value=""
-                  placeholder="e.g. EU-1"
-                  class="bg-white border border-navy-200 rounded-lg h-11 px-3 text-navy-800 font-normal text-sm"
-                />
-              </label>
-            </fieldset>
-          </div>
-
-          <div class="flex flex-wrap gap-3 pt-2">
-            <button
-              id="render-widget"
-              type="button"
-              class="bg-navy-800 text-white font-bold text-sm h-11 px-5 rounded-lg cursor-pointer hover:bg-navy-700 transition-colors"
-            >
-              Preview
-            </button>
-            <button
-              id="simulate-missing"
-              type="button"
-              class="bg-white border border-navy-200 text-navy-800 font-bold text-sm h-11 px-5 rounded-lg cursor-pointer hover:bg-navy-50 transition-colors"
-            >
-              Test missing destination
-            </button>
-          </div>
+          </fieldset>
         </section>
 
-        <!-- Preview -->
+        <!-- Column 2: presentation presets + controls -->
+        <section class="bg-white border border-navy-200/60 rounded-xl p-5 space-y-3">
+          <h2 class="text-base font-semibold">Presentation</h2>
+
+          <div>
+            <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-2">Presentation presets</div>
+            <div id="presentation-preset-list" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <label class="field-row">
+            Layout
+            <select id="layout" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="text" selected>Text · single line (PDP, cart)</option>
+              <option value="card">Card · prominent (PDP hero)</option>
+              <option value="badge">Badge · compact pill</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Date mode
+            <select id="date-mode" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="from" selected>as early as {earliest}</option>
+              <option value="on">on {mostLikely}</option>
+              <option value="by">by {latest}</option>
+              <option value="range">range {earliest} – {latest}</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Confidence verb
+            <select id="confidence" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="auto" selected>Auto</option>
+              <option value="estimated">Estimated</option>
+              <option value="guaranteed">Guaranteed</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Date format
+            <select id="date-format" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="long" selected>Long · Wednesday, Apr 29</option>
+              <option value="longWithYear">Long with year</option>
+              <option value="short">Short · Wed, Apr 29</option>
+              <option value="shortWithYear">Short with year</option>
+              <option value="relative">Relative · Tomorrow</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Icon
+            <select id="icon" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="none" selected>None</option>
+              <option value="truck">Truck</option>
+              <option value="calendar">Calendar</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Carrier annotation
+            <select id="show-carrier" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="none" selected>Hidden</option>
+              <option value="inline">Inline · via DHL</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Zip picker
+            <select id="zip-picker" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="none" selected>None</option>
+              <option value="inline">Inline editable</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            No-zip behavior
+            <select id="require-zip" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="false" selected>Use country-level estimate</option>
+              <option value="true">Show CTA link only</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Show cutoff
+            <select id="show-cutoff" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="auto" selected>Auto (urgent or express)</option>
+              <option value="always">Always</option>
+              <option value="never">Never</option>
+              <option value="express-only">Express services only</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Locale
+            <select id="locale" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="en" selected>English</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="it">Italiano</option>
+              <option value="es">Español</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Static fallback (on API error)
+            <input id="fallback-days" value="" placeholder="e.g. 3 or 2-3" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
+          </label>
+        </section>
+
+        <!-- Column 3: preview + embed code -->
         <div class="space-y-4">
-          <section class="bg-white border border-navy-200/60 rounded-xl p-5">
-            <h2 class="text-base font-semibold">Preview</h2>
-            <div id="promise-demo" class="mt-3 min-w-0 overflow-hidden"></div>
+          <section class="bg-white border border-navy-200/60 rounded-xl p-6">
+            <h2 class="text-base font-semibold mb-3">Preview</h2>
+            <div class="bg-navy-50/50 border border-dashed border-navy-200 rounded-lg p-6 min-h-[80px]">
+              <div id="promise-demo"></div>
+            </div>
+            <p class="text-xs text-navy-400 mt-2" id="preview-notes"></p>
           </section>
 
           <section class="bg-white border border-navy-200/60 rounded-xl p-5 space-y-4">
@@ -261,30 +233,12 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <button
-                class="text-xs font-semibold px-3 h-8 rounded-lg border cursor-pointer transition-colors"
-                data-embed-mode="html"
-                type="button"
-              >
-                HTML
-              </button>
-              <button
-                class="text-xs font-semibold px-3 h-8 rounded-lg border cursor-pointer transition-colors"
-                data-embed-mode="js"
-                type="button"
-              >
-                JavaScript
-              </button>
+              <button class="text-xs font-semibold px-3 h-8 rounded-lg border cursor-pointer transition-colors" data-embed-mode="html" type="button">HTML</button>
+              <button class="text-xs font-semibold px-3 h-8 rounded-lg border cursor-pointer transition-colors" data-embed-mode="js" type="button">JavaScript</button>
             </div>
 
             <div class="relative">
-              <button
-                id="copy-code"
-                type="button"
-                aria-label="Copy embed code"
-                title="Copy embed code"
-                class="absolute top-2.5 right-2.5 inline-flex items-center justify-center h-8 w-8 rounded-md bg-navy-700 text-navy-300 cursor-pointer hover:bg-navy-600 hover:text-white transition-colors data-[copied=true]:bg-green-600 data-[copied=true]:text-white"
-              >
+              <button id="copy-code" type="button" aria-label="Copy embed code" title="Copy embed code" class="absolute top-2.5 right-2.5 inline-flex items-center justify-center h-8 w-8 rounded-md bg-navy-700 text-navy-300 cursor-pointer hover:bg-navy-600 hover:text-white transition-colors data-[copied=true]:bg-green-600 data-[copied=true]:text-white">
                 <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path d="M6.5 2A2.5 2.5 0 0 0 4 4.5v7A2.5 2.5 0 0 0 6.5 14H7V4.5A2.5 2.5 0 0 1 9.5 2H6.5Z" />
                   <path d="M9.5 3A1.5 1.5 0 0 0 8 4.5v9A1.5 1.5 0 0 0 9.5 15h5A1.5 1.5 0 0 0 16 13.5v-9A1.5 1.5 0 0 0 14.5 3h-5Z" />
@@ -297,7 +251,14 @@
       </div>
     </main>
 
-    <script src="./dist/promise.iife.js"></script>
-    <script src="./dev/main.js"></script>
+    <script>
+      // Cache-bust dev scripts so a stale main.js never lingers on hot-reload
+      // (especially over the Tailscale tunnel).
+      (function () {
+        var v = '?v=' + Date.now();
+        document.write('<script src="./dist/promise.iife.js' + v + '"><\/script>');
+        document.write('<script src="./dev/main.js' + v + '"><\/script>');
+      })();
+    </script>
   </body>
 </html>

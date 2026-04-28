@@ -1,16 +1,31 @@
 import { getMessages } from './messages';
 import type {
-  DensityMode,
+  CarrierDisplay,
+  Confidence,
+  CutoffVisibility,
+  DateFormat,
+  DateMode,
+  FallbackDays,
+  IconKind,
   LayoutMode,
   ResolvedWidgetConfig,
-  SurfaceMode,
   WidgetConfig,
   WidgetInitOptions,
   WidgetMessages,
   WidgetTheme,
+  ZipPickerMode,
 } from './types';
 
 const DEFAULT_API_BASE_URL = 'https://api.parcellab.com';
+
+const DEFAULT_EXPRESS_SERVICE_LEVELS = [
+  'express',
+  'expedited',
+  'overnight',
+  'next-day',
+  'same-day',
+  'home-delivery-express',
+];
 
 function resolveTarget(target: WidgetInitOptions['target']): HTMLElement {
   if (typeof target === 'string') {
@@ -37,19 +52,115 @@ function parseAccountId(accountId: WidgetConfig['accountId']): number {
 }
 
 function parseLayout(layout: WidgetConfig['layout']): LayoutMode {
-  if (layout === 'compact' || layout === 'banner') {
+  if (layout === 'card' || layout === 'badge') {
     return layout;
   }
-
-  return 'list';
+  return 'text';
 }
 
-function parseDensity(density: WidgetConfig['density']): DensityMode {
-  return density === 'compact' ? 'compact' : 'comfortable';
+function parseIcon(icon: WidgetConfig['icon']): IconKind {
+  if (icon === 'truck' || icon === 'calendar') {
+    return icon;
+  }
+  return 'none';
 }
 
-function parseSurface(surface: WidgetConfig['surface']): SurfaceMode {
-  return surface === 'subtle' ? 'subtle' : 'plain';
+function parseConfidence(value: WidgetConfig['confidence']): Confidence {
+  if (value === 'estimated' || value === 'guaranteed') return value;
+  return 'auto';
+}
+
+function parseDateFormat(value: WidgetConfig['dateFormat']): DateFormat {
+  if (
+    value === 'short' ||
+    value === 'shortWithYear' ||
+    value === 'longWithYear' ||
+    value === 'relative'
+  ) {
+    return value;
+  }
+  return 'long';
+}
+
+function parseCarrier(value: WidgetConfig['showCarrier']): CarrierDisplay {
+  if (value === 'inline' || value === true) return 'inline';
+  return 'none';
+}
+
+function parseFallbackDays(
+  value: WidgetConfig['fallbackDays'],
+): FallbackDays | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.round(value);
+  }
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    Number.isFinite(value[0]) &&
+    Number.isFinite(value[1]) &&
+    value[0]! >= 0 &&
+    value[1]! >= value[0]!
+  ) {
+    return [Math.round(value[0]!), Math.round(value[1]!)];
+  }
+  return null;
+}
+
+function parseFallbackDaysAttribute(value: string): FallbackDays | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const rangeMatch = trimmed.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+  if (rangeMatch) {
+    const min = Number(rangeMatch[1]);
+    const max = Number(rangeMatch[2]);
+    return parseFallbackDays([min, max]);
+  }
+  const single = Number(trimmed);
+  return parseFallbackDays(single);
+}
+
+function parseDateMode(dateMode: WidgetConfig['dateMode']): DateMode {
+  switch (dateMode) {
+    case 'on':
+    case 'by':
+    case 'range':
+      return dateMode;
+    default:
+      return 'from';
+  }
+}
+
+function parseZipPicker(zipPicker: WidgetConfig['zipPicker']): ZipPickerMode {
+  if (zipPicker === 'inline' || zipPicker === 'link') {
+    return zipPicker;
+  }
+
+  return 'none';
+}
+
+function parseShowCutoff(
+  showCutoff: WidgetConfig['showCutoff'],
+): CutoffVisibility {
+  switch (showCutoff) {
+    case 'always':
+    case 'never':
+    case 'express-only':
+    case 'auto':
+      return showCutoff;
+    default:
+      return 'auto';
+  }
+}
+
+function parseCalibration(calibration: WidgetConfig['calibration']): string {
+  if (
+    calibration === 'conservative' ||
+    calibration === 'balanced' ||
+    calibration === 'aggressive'
+  ) {
+    return calibration;
+  }
+  return '';
 }
 
 export function resolveConfig(
@@ -74,23 +185,31 @@ export function resolveConfig(
     courier: config.courier?.trim() ?? '',
     serviceLevel: config.serviceLevel?.trim() ?? '',
     warehouse: config.warehouse?.trim() ?? '',
-    calibration: config.calibration ?? '',
+    calibration: parseCalibration(config.calibration),
+    tag: config.tag?.trim() ?? '',
+    draft: config.draft === true,
+
+    layout: parseLayout(config.layout),
+    dateMode: parseDateMode(config.dateMode),
+    zipPicker: parseZipPicker(config.zipPicker),
+    showCutoff: parseShowCutoff(config.showCutoff),
+    icon: parseIcon(config.icon),
+    showPrice: config.showPrice === true,
+    confidence: parseConfidence(config.confidence),
+    dateFormat: parseDateFormat(config.dateFormat),
+    showCarrier: parseCarrier(config.showCarrier),
+    requireZip: config.requireZip === true,
+    fallbackDays: parseFallbackDays(config.fallbackDays),
+    maxPredictions: Math.max(1, config.maxPredictions ?? 5),
+
     locale,
     messages,
     apiBaseUrl: (config.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/, ''),
-    layout: parseLayout(config.layout),
-    density: parseDensity(config.density),
-    surface: parseSurface(config.surface),
     theme: config.theme ?? {},
     className: config.className?.trim() ?? '',
-    showCutoff: config.showCutoff !== false,
-    showCourier: config.showCourier !== false,
-    showDateRange: config.showDateRange !== false,
-    showIcon: config.showIcon !== false,
-    zipEditable: config.zipEditable === true,
-    draft: config.draft === true,
-    tag: config.tag?.trim() ?? '',
-    maxPredictions: config.maxPredictions ?? 5,
+    expressServiceLevels: (
+      config.expressServiceLevels ?? DEFAULT_EXPRESS_SERVICE_LEVELS
+    ).map((s) => s.toLowerCase()),
   };
 }
 
@@ -170,40 +289,81 @@ export function readConfigFromElement(
     config.apiBaseUrl = dataset.apiBaseUrl;
   }
 
-  if (dataset.layout === 'list' || dataset.layout === 'compact' || dataset.layout === 'banner') {
+  if (
+    dataset.layout === 'text' ||
+    dataset.layout === 'card' ||
+    dataset.layout === 'badge'
+  ) {
     config.layout = dataset.layout;
   }
 
-  if (dataset.density === 'comfortable' || dataset.density === 'compact') {
-    config.density = dataset.density;
+  if (
+    dataset.dateMode === 'from' ||
+    dataset.dateMode === 'on' ||
+    dataset.dateMode === 'by' ||
+    dataset.dateMode === 'range'
+  ) {
+    config.dateMode = dataset.dateMode;
   }
 
-  if (dataset.surface === 'plain' || dataset.surface === 'subtle') {
-    config.surface = dataset.surface;
+  if (
+    dataset.zipPicker === 'none' ||
+    dataset.zipPicker === 'inline' ||
+    dataset.zipPicker === 'link'
+  ) {
+    config.zipPicker = dataset.zipPicker;
+  }
+
+  if (
+    dataset.showCutoff === 'auto' ||
+    dataset.showCutoff === 'always' ||
+    dataset.showCutoff === 'never' ||
+    dataset.showCutoff === 'express-only'
+  ) {
+    config.showCutoff = dataset.showCutoff;
+  }
+
+  if (
+    dataset.icon === 'truck' ||
+    dataset.icon === 'calendar' ||
+    dataset.icon === 'none'
+  ) {
+    config.icon = dataset.icon;
+  }
+
+  if (
+    dataset.confidence === 'auto' ||
+    dataset.confidence === 'estimated' ||
+    dataset.confidence === 'guaranteed'
+  ) {
+    config.confidence = dataset.confidence;
+  }
+
+  if (
+    dataset.dateFormat === 'long' ||
+    dataset.dateFormat === 'longWithYear' ||
+    dataset.dateFormat === 'short' ||
+    dataset.dateFormat === 'shortWithYear' ||
+    dataset.dateFormat === 'relative'
+  ) {
+    config.dateFormat = dataset.dateFormat;
+  }
+
+  if (dataset.showCarrier === 'inline' || dataset.showCarrier === 'true') {
+    config.showCarrier = 'inline';
+  } else if (dataset.showCarrier === 'none' || dataset.showCarrier === 'false') {
+    config.showCarrier = 'none';
+  }
+
+  if (dataset.requireZip === 'true') config.requireZip = true;
+
+  if (dataset.fallbackDays) {
+    const fallback = parseFallbackDaysAttribute(dataset.fallbackDays);
+    if (fallback != null) config.fallbackDays = fallback;
   }
 
   if (dataset.className) {
     config.className = dataset.className;
-  }
-
-  if (dataset.showCutoff === 'false') {
-    config.showCutoff = false;
-  }
-
-  if (dataset.showCourier === 'false') {
-    config.showCourier = false;
-  }
-
-  if (dataset.showDateRange === 'false') {
-    config.showDateRange = false;
-  }
-
-  if (dataset.showIcon === 'false') {
-    config.showIcon = false;
-  }
-
-  if (dataset.zipEditable === 'true') {
-    config.zipEditable = true;
   }
 
   if (dataset.draft === 'true') {
