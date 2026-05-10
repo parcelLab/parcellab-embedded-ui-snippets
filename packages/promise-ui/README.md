@@ -142,6 +142,8 @@ Full API documentation: [Promise API Reference](https://docs.parcellab.com/docs/
 | `showIcon` | `boolean` | `true` | Show the truck icon in the header. |
 | `zipEditable` | `boolean` | `false` | Allow the user to enter or change the postal code. |
 | `maxPredictions` | `number` | `5` | Maximum delivery options to display. |
+| `selectionReferenceDate` | `'earliest' \| 'latest' \| 'mostLikely'` | `'mostLikely'` | Which API date field is compared across predictions when picking the primary. |
+| `selectionPick` | `'earliest' \| 'latest'` | `'earliest'` | Pick the prediction with the smallest (`earliest`) or largest (`latest`) reference date. |
 | `draft` | `boolean` | `false` | Use unpublished Promise configuration. |
 | `tag` | `string` | — | Target specific adjustment rules. |
 | `className` | `string` | — | Extra CSS class added to the root element. |
@@ -154,6 +156,24 @@ Full API documentation: [Promise API Reference](https://docs.parcellab.com/docs/
 | `list` | Each delivery option as a separate card with full details | Product pages with space |
 | `compact` | Stacked cards sharing borders, no gaps between them | Sidebars, compact spaces |
 | `banner` | Horizontal single-line layout per option | Checkout summaries, narrow inline placements |
+
+### Selecting the Primary Prediction
+
+The Promise API can return several predictions (one per courier / service level). The widget renders one as the primary headline and uses two options to decide which:
+
+- **`selectionReferenceDate`** — which date field on each prediction is the basis for comparison: `earliest` uses `prediction.earliest_date`, `latest` uses `prediction.latest_date`, `mostLikely` uses `prediction.most_likely_date`.
+- **`selectionPick`** — once predictions are sorted by that reference date, take the one with the smallest (`earliest`) or largest (`latest`) value.
+
+Common combinations:
+
+| Goal | `selectionReferenceDate` | `selectionPick` |
+|------|--------------------------|-----------------|
+| Show the option that arrives soonest (default) | `mostLikely` | `earliest` |
+| Show the option whose worst case is best (most reliable upper bound) | `latest` | `earliest` |
+| Show the option that delivers earliest in the best case | `earliest` | `earliest` |
+| Show the slowest option | `mostLikely` | `latest` |
+
+Pre-filtering (`courier`, `serviceLevel`, `warehouse`) is applied server-side before this selection runs, so the two work together: filter for the eligible options, then pick one.
 
 ### HTML Data Attributes
 
@@ -178,6 +198,8 @@ When using the IIFE auto-init, configure via `data-*` attributes:
   data-service-level="home-delivery"
   data-warehouse="EU-1"
   data-max-predictions="3"
+  data-selection-reference-date="latest"
+  data-selection-pick="earliest"
   data-messages='{"title":"Lieferzeit"}'
   data-theme='{"accentColor":"#3D3AD3","radius":"8px"}'
 ></div>

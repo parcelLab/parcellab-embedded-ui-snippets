@@ -233,17 +233,41 @@ function mapPrediction(
   };
 }
 
-/** Always pick the option that arrives earliest by most_likely_date. */
+function referenceIso(
+  prediction: PredictionViewModel,
+  reference: ResolvedWidgetConfig['selectionReferenceDate'],
+): string {
+  switch (reference) {
+    case 'earliest':
+      return prediction.earliestIso;
+    case 'latest':
+      return prediction.latestIso || prediction.mostLikelyIso || prediction.earliestIso;
+    case 'mostLikely':
+    default:
+      return prediction.mostLikelyIso || prediction.earliestIso;
+  }
+}
+
+/**
+ * Pick a primary prediction from the API response.
+ *
+ * `selectionReferenceDate` chooses which date field on each prediction is the
+ * point of comparison; `selectionPick` decides whether the prediction with the
+ * smallest (`earliest`) or largest (`latest`) value of that field wins.
+ */
 function pickPrimary(
   predictions: PredictionViewModel[],
+  config: ResolvedWidgetConfig,
 ): PredictionViewModel {
   const sorted = [...predictions].sort((a, b) => {
-    const aDate = a.mostLikelyIso || a.earliestIso;
-    const bDate = b.mostLikelyIso || b.earliestIso;
+    const aDate = referenceIso(a, config.selectionReferenceDate);
+    const bDate = referenceIso(b, config.selectionReferenceDate);
     if (aDate === bDate) return 0;
     return aDate < bDate ? -1 : 1;
   });
-  return sorted[0]!;
+  return config.selectionPick === 'latest'
+    ? sorted[sorted.length - 1]!
+    : sorted[0]!;
 }
 
 function buildSummary(
@@ -297,7 +321,7 @@ export function readyViewModel(
     return fallbackOrEmpty(config);
   }
 
-  const primary = pickPrimary(predictions);
+  const primary = pickPrimary(predictions, config);
   const { text, dateText } = buildSummary(primary, config);
 
   return {

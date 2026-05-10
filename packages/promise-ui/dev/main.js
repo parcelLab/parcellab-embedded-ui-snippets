@@ -162,6 +162,21 @@ const copyCodeButton = el('copy-code');
 const embedModeButtons = document.querySelectorAll('[data-embed-mode]');
 const previewNotes = el('preview-notes');
 
+const API_BASE_URL = 'https://api.parcellab.com';
+const mainElement = document.querySelector('main');
+const apiPanelToggle = el('toggle-api-panel');
+const apiRefreshButton = el('api-refresh');
+const apiCopyButton = el('api-copy');
+const apiRequestUrlEl = el('api-request-url');
+const apiMethodEl = el('api-method');
+const apiResponseEl = el('api-response');
+const apiStatusEl = el('api-status');
+
+let apiPanelOpen = false;
+let apiAbortController = null;
+let apiFetchTimer = null;
+const apiResponseCache = new Map();
+
 function renderPresetButtons(host, presets) {
   for (const [key, preset] of Object.entries(presets)) {
     const btn = document.createElement('button');
@@ -225,6 +240,8 @@ function currentConfig() {
     fallbackDaysRaw: el('fallback-days').value,
     showCarrier: el('show-carrier').value,
     requireZip: el('require-zip').value === 'true',
+    selectionReferenceDate: el('selection-reference-date').value,
+    selectionPick: el('selection-pick').value,
   };
 }
 
@@ -304,6 +321,8 @@ function buildInitConfig(c) {
     dateFormat: c.dateFormat,
     showCarrier: c.showCarrier,
     requireZip: c.requireZip,
+    selectionReferenceDate: c.selectionReferenceDate,
+    selectionPick: c.selectionPick,
   };
   const fb = parseFallbackDays(c.fallbackDaysRaw ?? '');
   if (fb != null) out.fallbackDays = fb;
@@ -329,7 +348,158 @@ function renderWidget() {
   }
 
   updateEmbedCode();
+  scheduleApiPanelUpdate();
 }
+
+function buildApiUrl(c) {
+  const url = new URL('/v4/promise/prediction/predict/', API_BASE_URL);
+  url.searchParams.set('account', String(c.accountId));
+  url.searchParams.set(
+    'destination_country_iso3',
+    (c.destinationCountry || '').toUpperCase(),
+  );
+  if (c.postalCode) url.searchParams.set('destination_postal_code', c.postalCode);
+  if (c.courier) url.searchParams.set('courier', c.courier);
+  if (c.serviceLevel) url.searchParams.set('service_level', c.serviceLevel);
+  if (c.warehouse) url.searchParams.set('warehouse', c.warehouse);
+  if (c.locale) url.searchParams.set('language_iso2', c.locale);
+  return url.toString();
+}
+
+function setApiStatus(text, kind) {
+  apiStatusEl.textContent = text;
+  const colorClass =
+    kind === 'error'
+      ? 'text-red-500'
+      : kind === 'success'
+        ? 'text-green-600'
+        : kind === 'loading'
+          ? 'text-brand'
+          : 'text-navy-400';
+  apiStatusEl.className = `text-[0.7rem] font-semibold tracking-wide ${colorClass}`;
+}
+
+function scheduleApiPanelUpdate() {
+  if (!apiPanelOpen) return;
+  if (apiFetchTimer) clearTimeout(apiFetchTimer);
+  apiFetchTimer = setTimeout(() => {
+    apiFetchTimer = null;
+    void updateApiPanel();
+  }, 200);
+}
+
+async function updateApiPanel({ bypassCache = false } = {}) {
+  if (!apiPanelOpen) return;
+  const c = currentConfig();
+
+  if (!c.accountId || !c.destinationCountry) {
+    apiMethodEl.textContent = '';
+    apiRequestUrlEl.textContent = '— missing required fields —';
+    apiResponseEl.textContent = '';
+    setApiStatus('Skipped', 'info');
+    return;
+  }
+
+  if (c.requireZip && !c.postalCode) {
+    apiMethodEl.textContent = '';
+    apiRequestUrlEl.textContent = '— call skipped —';
+    apiResponseEl.textContent =
+      'requireZip is true and no postal code provided.\nThe widget shows the CTA without calling the API.';
+    setApiStatus('Skipped', 'info');
+    return;
+  }
+
+  const url = buildApiUrl(c);
+  apiMethodEl.textContent = 'GET';
+  apiRequestUrlEl.textContent = url;
+
+  if (!bypassCache) {
+    const cached = apiResponseCache.get(url);
+    if (cached) {
+      apiResponseEl.textContent = cached.body;
+      setApiStatus(
+        `${cached.status} ${cached.statusText} · cached`,
+        cached.status >= 200 && cached.status < 300 ? 'success' : 'error',
+      );
+      return;
+    }
+  }
+
+  apiAbortController?.abort();
+  apiAbortController = new AbortController();
+  const signal = apiAbortController.signal;
+  setApiStatus('Loading…', 'loading');
+  apiResponseEl.textContent = '';
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    setApiStatus('Network error', 'error');
+    apiResponseEl.textContent = String(error.message ?? error);
+    return;
+  }
+
+  if (signal.aborted) return;
+
+  const text = await response.text();
+  let body = text;
+  try {
+    body = JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    // not JSON — leave as-is
+  }
+
+  apiResponseEl.textContent = body || '(empty body)';
+  apiResponseCache.set(url, {
+    status: response.status,
+    statusText: response.statusText,
+    body: apiResponseEl.textContent,
+  });
+  setApiStatus(`${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+}
+
+function setApiPanelOpen(open) {
+  apiPanelOpen = open;
+  apiPanelToggle.setAttribute('aria-pressed', String(open));
+  apiPanelToggle.textContent = open ? 'Hide API response' : 'Show API response';
+  mainElement.dataset.showApi = String(open);
+  if (open) {
+    void updateApiPanel();
+  } else {
+    apiAbortController?.abort();
+    if (apiFetchTimer) {
+      clearTimeout(apiFetchTimer);
+      apiFetchTimer = null;
+    }
+  }
+}
+
+apiPanelToggle.addEventListener('click', () => {
+  setApiPanelOpen(!apiPanelOpen);
+});
+
+apiRefreshButton.addEventListener('click', () => {
+  void updateApiPanel({ bypassCache: true });
+});
+
+apiCopyButton.addEventListener('click', async () => {
+  const text = apiResponseEl.textContent ?? '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // ignore
+  }
+  apiCopyButton.dataset.copied = 'true';
+  setTimeout(() => {
+    apiCopyButton.dataset.copied = 'false';
+  }, 1200);
+});
 
 function escapeAttribute(value) {
   return String(value)
@@ -368,6 +538,8 @@ function htmlEmbedSnippet(c) {
     `data-date-format="${c.dateFormat}"`,
     `data-show-carrier="${c.showCarrier}"`,
     `data-require-zip="${c.requireZip ? 'true' : 'false'}"`,
+    `data-selection-reference-date="${c.selectionReferenceDate}"`,
+    `data-selection-pick="${c.selectionPick}"`,
     `data-fallback-days="${fallbackDaysAttr(c.fallbackDaysRaw ?? '')}"`,
   ];
 
@@ -401,6 +573,8 @@ function jsEmbedSnippet(c) {
     `  dateFormat: ${JSON.stringify(c.dateFormat)}`,
     `  showCarrier: ${JSON.stringify(c.showCarrier)}`,
     `  requireZip: ${c.requireZip ? 'true' : 'false'}`,
+    `  selectionReferenceDate: ${JSON.stringify(c.selectionReferenceDate)}`,
+    `  selectionPick: ${JSON.stringify(c.selectionPick)}`,
     `  fallbackDays: ${fallbackLiteral}`,
   ];
 
@@ -436,6 +610,7 @@ const controlIds = [
   'icon', 'confidence', 'date-format',
   'fallback-days', 'show-carrier',
   'require-zip',
+  'selection-reference-date', 'selection-pick',
 ];
 for (const id of controlIds) {
   const element = el(id);

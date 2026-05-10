@@ -551,4 +551,106 @@ describe('DeliveryPromise Widget', () => {
     widget.destroy();
     expect(container.querySelector('.pl-promise')).toBeNull();
   });
+
+  describe('primary selection from multiple predictions', () => {
+    function selectionFixtures() {
+      const dhlStandard = makePrediction({
+        id: 'DHL Standard',
+        courier_name: 'DHL',
+        prediction: {
+          ...makePrediction().prediction,
+          earliest_date: '2026-04-13',
+          earliest_locale: 'Monday, Apr 13',
+          most_likely_date: '2026-04-15',
+          most_likely_locale: 'Wednesday, Apr 15',
+          latest_date: '2026-04-19',
+          latest_locale: 'Sunday, Apr 19',
+        },
+      });
+      const upsExpress = makePrediction({
+        id: 'UPS Express',
+        courier: 'ups',
+        courier_name: 'UPS',
+        prediction: {
+          ...makePrediction().prediction,
+          earliest_date: '2026-04-15',
+          earliest_locale: 'Wednesday, Apr 15',
+          most_likely_date: '2026-04-15',
+          most_likely_locale: 'Wednesday, Apr 15',
+          latest_date: '2026-04-15',
+          latest_locale: 'Wednesday, Apr 15',
+        },
+      });
+      const dhlNextDay = makePrediction({
+        id: 'DHL DE NDD',
+        courier_name: 'DHL',
+        prediction: {
+          ...makePrediction().prediction,
+          earliest_date: '2026-04-27',
+          earliest_locale: 'Monday, Apr 27',
+          most_likely_date: '2026-04-27',
+          most_likely_locale: 'Monday, Apr 27',
+          latest_date: '2026-04-26',
+          latest_locale: 'Sunday, Apr 26',
+        },
+      });
+      return [dhlStandard, upsExpress, dhlNextDay];
+    }
+
+    it('selectionReferenceDate=latest with pick=earliest picks the smallest latest_date', async () => {
+      globalThis.fetch = mockFetchResponse(successResponse(selectionFixtures()));
+      const { init } = await import('../src/index');
+      const widget = init({
+        target: container,
+        accountId: 18,
+        destinationCountry: 'DEU',
+        dateMode: 'by',
+        showCarrier: 'inline',
+        selectionReferenceDate: 'latest',
+        selectionPick: 'earliest',
+      });
+
+      await vi.waitFor(() => {
+        expect(container.textContent).toContain('Wednesday, Apr 15');
+        expect(container.textContent).toContain('via UPS');
+      });
+      widget.destroy();
+    });
+
+    it('selectionPick=latest selects the prediction with the largest reference date', async () => {
+      globalThis.fetch = mockFetchResponse(successResponse(selectionFixtures()));
+      const { init } = await import('../src/index');
+      const widget = init({
+        target: container,
+        accountId: 18,
+        destinationCountry: 'DEU',
+        dateMode: 'on',
+        selectionReferenceDate: 'mostLikely',
+        selectionPick: 'latest',
+      });
+
+      await vi.waitFor(() => {
+        expect(container.textContent).toContain('Monday, Apr 27');
+      });
+      widget.destroy();
+    });
+
+    it('reads selectionReferenceDate / selectionPick from data attributes via auto-init', async () => {
+      globalThis.fetch = mockFetchResponse(successResponse(selectionFixtures()));
+      container.setAttribute('data-promise', '');
+      container.setAttribute('data-account-id', '18');
+      container.setAttribute('data-country', 'DEU');
+      container.setAttribute('data-date-mode', 'by');
+      container.setAttribute('data-selection-reference-date', 'latest');
+      container.setAttribute('data-selection-pick', 'earliest');
+
+      const { autoInit } = await import('../src/index');
+      const [widget] = autoInit(document);
+
+      await vi.waitFor(() => {
+        expect(container.textContent).toContain('Wednesday, Apr 15');
+      });
+      widget!.destroy();
+    });
+  });
 });

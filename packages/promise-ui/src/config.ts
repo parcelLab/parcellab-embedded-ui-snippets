@@ -9,6 +9,8 @@ import type {
   IconKind,
   LayoutMode,
   ResolvedWidgetConfig,
+  SelectionPick,
+  SelectionReferenceDate,
   WidgetConfig,
   WidgetInitOptions,
   WidgetMessages,
@@ -163,6 +165,17 @@ function parseCalibration(calibration: WidgetConfig['calibration']): string {
   return '';
 }
 
+function parseSelectionReferenceDate(
+  value: WidgetConfig['selectionReferenceDate'],
+): SelectionReferenceDate {
+  if (value === 'earliest' || value === 'latest') return value;
+  return 'mostLikely';
+}
+
+function parseSelectionPick(value: WidgetConfig['selectionPick']): SelectionPick {
+  return value === 'latest' ? 'latest' : 'earliest';
+}
+
 export function resolveConfig(
   config: WidgetInitOptions,
 ): ResolvedWidgetConfig {
@@ -201,6 +214,9 @@ export function resolveConfig(
     requireZip: config.requireZip === true,
     fallbackDays: parseFallbackDays(config.fallbackDays),
     maxPredictions: Math.max(1, config.maxPredictions ?? 5),
+
+    selectionReferenceDate: parseSelectionReferenceDate(config.selectionReferenceDate),
+    selectionPick: parseSelectionPick(config.selectionPick),
 
     locale,
     messages,
@@ -356,6 +372,21 @@ export function readConfigFromElement(
   }
 
   if (dataset.requireZip === 'true') config.requireZip = true;
+
+  if (
+    dataset.selectionReferenceDate === 'earliest' ||
+    dataset.selectionReferenceDate === 'latest' ||
+    dataset.selectionReferenceDate === 'mostLikely'
+  ) {
+    config.selectionReferenceDate = dataset.selectionReferenceDate;
+  }
+
+  if (
+    dataset.selectionPick === 'earliest' ||
+    dataset.selectionPick === 'latest'
+  ) {
+    config.selectionPick = dataset.selectionPick;
+  }
 
   if (dataset.fallbackDays) {
     const fallback = parseFallbackDaysAttribute(dataset.fallbackDays);

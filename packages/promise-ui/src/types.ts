@@ -27,6 +27,12 @@ export type ZipPickerMode = 'none' | 'inline' | 'link';
 
 export type CutoffUrgency = 'none' | 'low' | 'medium' | 'high';
 
+/** Which API date field is compared across predictions to decide the primary. */
+export type SelectionReferenceDate = 'earliest' | 'latest' | 'mostLikely';
+
+/** Whether to pick the prediction with the earliest or latest reference date. */
+export type SelectionPick = 'earliest' | 'latest';
+
 /** Static fallback shown when the API errors out or returns nothing. */
 export type FallbackDays = number | [number, number];
 
@@ -140,6 +146,12 @@ export interface WidgetConfig {
 
   maxPredictions?: number;
 
+  // From the predictions returned by the API, decide which one becomes the primary.
+  // referenceDate picks which API field is compared across predictions; pick decides
+  // whether the prediction with the smallest or largest such date wins.
+  selectionReferenceDate?: SelectionReferenceDate;
+  selectionPick?: SelectionPick;
+
   // i18n + theming
   locale?: string;
   messages?: Partial<WidgetMessages>;
@@ -176,6 +188,9 @@ export interface ResolvedWidgetConfig {
   requireZip: boolean;
   fallbackDays: FallbackDays | null;
   maxPredictions: number;
+
+  selectionReferenceDate: SelectionReferenceDate;
+  selectionPick: SelectionPick;
 
   locale: string;
   messages: WidgetMessages;

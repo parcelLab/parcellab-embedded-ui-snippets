@@ -54,16 +54,56 @@
       .field-row { display: grid; gap: 4px; font-size: 0.875rem; font-weight: 600; color: #41536f; }
       .field-row > input,
       .field-row > select { font-weight: 400; color: #10203c; }
+
+      .layout-grid {
+        display: grid;
+        gap: 24px;
+        align-items: start;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 1024px) {
+        .layout-grid {
+          grid-template-columns: minmax(300px, 340px) minmax(300px, 340px) minmax(0, 1fr);
+        }
+      }
+      @media (min-width: 1320px) {
+        main[data-show-api="true"] .layout-grid {
+          grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(0, 1fr) minmax(360px, 440px);
+        }
+      }
+      .api-panel { display: none; }
+      main[data-show-api="true"] .api-panel { display: block; }
+      @media (min-width: 1024px) and (max-width: 1319.98px) {
+        main[data-show-api="true"] .api-panel { grid-column: 1 / -1; }
+      }
+      main[data-show-api="true"] { max-width: 1760px !important; }
+
+      .api-toggle[aria-pressed="true"] {
+        background-color: #3D3AD3;
+        color: #fff;
+        border-color: #3D3AD3;
+      }
+      .api-mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+      }
     </style>
   </head>
   <body class="bg-navy-50 text-navy-800 min-h-screen">
-    <main class="max-w-[1480px] mx-auto px-5 py-10 pb-20">
-      <header class="mb-6">
-        <h1 class="text-xl font-semibold">Promise UI — Dev Demo</h1>
-        <p class="text-sm text-navy-500 mt-1">Delivery date widget for product, cart, and checkout surfaces. Toned-down by default.</p>
+    <main class="max-w-[1480px] mx-auto px-5 py-10 pb-20" data-show-api="false">
+      <header class="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-xl font-semibold">Promise UI — Dev Demo</h1>
+          <p class="text-sm text-navy-500 mt-1">Delivery date widget for product, cart, and checkout surfaces. Toned-down by default.</p>
+        </div>
+        <button id="toggle-api-panel" type="button" aria-pressed="false"
+          class="api-toggle text-xs font-semibold px-3 h-9 rounded-lg border border-navy-200 bg-white text-navy-500 hover:bg-navy-50 transition-colors cursor-pointer self-center whitespace-nowrap">
+          Show API response
+        </button>
       </header>
 
-      <div class="grid gap-6 items-start grid-cols-1 lg:grid-cols-[minmax(300px,340px)_minmax(300px,340px)_minmax(0,1fr)]">
+      <div class="layout-grid">
 
         <!-- Column 1: data presets, connection, api filters -->
         <section class="bg-white border border-navy-200/60 rounded-xl p-5 space-y-5">
@@ -102,6 +142,28 @@
             <label class="field-row">
               Warehouse
               <input id="warehouse" value="" placeholder="Optional" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
+            </label>
+          </fieldset>
+
+          <fieldset class="space-y-2">
+            <legend class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Selection</legend>
+            <p class="text-[0.78rem] text-navy-400 leading-snug -mt-1">
+              When the API returns multiple options, decide which one becomes the primary.
+            </p>
+            <label class="field-row">
+              Reference date
+              <select id="selection-reference-date" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+                <option value="mostLikely" selected>Most likely date</option>
+                <option value="earliest">Earliest date</option>
+                <option value="latest">Latest date</option>
+              </select>
+            </label>
+            <label class="field-row">
+              Pick
+              <select id="selection-pick" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+                <option value="earliest" selected>Earliest reference across options</option>
+                <option value="latest">Latest reference across options</option>
+              </select>
             </label>
           </fieldset>
         </section>
@@ -248,6 +310,49 @@
             </div>
           </section>
         </div>
+
+        <!-- Column 4 (optional): raw API response -->
+        <section class="api-panel bg-white border border-navy-200/60 rounded-xl p-5 space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-base font-semibold">API response</h2>
+              <p class="text-navy-400 text-[0.82rem] leading-snug mt-1">
+                Raw response from the Promise prediction endpoint for the current parameters.
+              </p>
+            </div>
+            <button id="api-refresh" type="button" aria-label="Refresh API response" title="Refresh"
+              class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-navy-200 bg-white text-navy-500 hover:bg-navy-50 transition-colors cursor-pointer shrink-0">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.713-3.138.75.75 0 0 0-1.45-.39ZM3.794 7.292a7 7 0 0 1 11.713-3.138l.31.31V2.034a.75.75 0 0 1 1.5 0v4.243a.75.75 0 0 1-.75.75H12.327a.75.75 0 0 1 0-1.5h2.433l-.312-.311A5.5 5.5 0 0 0 5.247 7.682a.75.75 0 0 1-1.453-.39Z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Request</div>
+              <div id="api-method" class="text-[0.7rem] font-semibold text-brand uppercase tracking-wider"></div>
+            </div>
+            <div id="api-request-url" class="api-mono bg-navy-50 border border-navy-200/60 rounded-lg p-3 break-all whitespace-pre-wrap text-navy-700 min-h-[40px]"></div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Response</div>
+              <div id="api-status" class="text-[0.7rem] font-semibold tracking-wide text-navy-400"></div>
+            </div>
+            <div class="relative">
+              <button id="api-copy" type="button" aria-label="Copy response" title="Copy response"
+                class="absolute top-2.5 right-2.5 inline-flex items-center justify-center h-8 w-8 rounded-md bg-navy-700 text-navy-300 cursor-pointer hover:bg-navy-600 hover:text-white transition-colors data-[copied=true]:bg-green-600 data-[copied=true]:text-white">
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M6.5 2A2.5 2.5 0 0 0 4 4.5v7A2.5 2.5 0 0 0 6.5 14H7V4.5A2.5 2.5 0 0 1 9.5 2H6.5Z" />
+                  <path d="M9.5 3A1.5 1.5 0 0 0 8 4.5v9A1.5 1.5 0 0 0 9.5 15h5A1.5 1.5 0 0 0 16 13.5v-9A1.5 1.5 0 0 0 14.5 3h-5Z" />
+                </svg>
+              </button>
+              <pre class="api-mono bg-navy-900 text-navy-100 rounded-lg p-4 pr-14 overflow-auto m-0 max-h-[70vh] whitespace-pre"><code id="api-response">—</code></pre>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
 
