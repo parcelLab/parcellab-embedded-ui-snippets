@@ -114,6 +114,45 @@ describe('DeliveryPromise Widget', () => {
     widget.destroy();
   });
 
+  it('collapses dateMode=range to a single date when earliest equals latest', async () => {
+    globalThis.fetch = mockFetchResponse(successResponse([expressPrediction()]));
+    const { init } = await import('../src/index');
+    const widget = init({
+      target: container,
+      accountId: 18,
+      destinationCountry: 'DEU',
+      dateMode: 'range',
+    });
+
+    await vi.waitFor(() => {
+      // Falls back to the "on" template — single date, no duplicated span.
+      expect(container.textContent).toContain('Guaranteed delivery on');
+      expect(container.textContent).toContain('Monday, Apr 13');
+      expect(container.textContent).not.toMatch(/Monday, Apr 13\s*–/);
+    });
+    widget.destroy();
+  });
+
+  it('collapses card heading when range dates are equal', async () => {
+    globalThis.fetch = mockFetchResponse(successResponse([expressPrediction()]));
+    const { init } = await import('../src/index');
+    const widget = init({
+      target: container,
+      accountId: 18,
+      destinationCountry: 'DEU',
+      dateMode: 'range',
+      layout: 'card',
+    });
+
+    await vi.waitFor(() => {
+      const heading = container.querySelector('.pl-promise__card-heading');
+      const date = container.querySelector('.pl-promise__card-date');
+      expect(heading?.textContent).toBe('Guaranteed arrival');
+      expect(date?.textContent).toBe('Monday, Apr 13');
+    });
+    widget.destroy();
+  });
+
   it('renders dateMode=on with most-likely date', async () => {
     globalThis.fetch = mockFetchResponse(successResponse());
     const { init } = await import('../src/index');
