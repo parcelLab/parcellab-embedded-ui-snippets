@@ -121,12 +121,16 @@ function formatDate(
  * Collapse `range` to `on` when the two dates are identical — a one-point
  * range reads more naturally as a single-date sentence ("delivery on May 18")
  * than as a duplicated span ("May 18 – May 18").
+ *
+ * Compare the raw ISO dates, not the formatted display strings: with
+ * `dateFormat='relative'`, distinct dates can format identically (e.g. both as
+ * "Today"), and we don't want to claim a single-date delivery for a real range.
  */
 export function effectiveDateMode(
   mode: DateMode,
   primary: PredictionViewModel,
 ): DateMode {
-  if (mode === 'range' && primary.earliestDate === primary.latestDate) {
+  if (mode === 'range' && primary.earliestIso === primary.latestIso) {
     return 'on';
   }
   return mode;
