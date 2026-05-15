@@ -117,6 +117,25 @@ function formatDate(
   return formatter.format(date);
 }
 
+/**
+ * Collapse `range` to `on` when the two dates are identical — a one-point
+ * range reads more naturally as a single-date sentence ("delivery on May 18")
+ * than as a duplicated span ("May 18 – May 18").
+ *
+ * Compare the raw ISO dates, not the formatted display strings: with
+ * `dateFormat='relative'`, distinct dates can format identically (e.g. both as
+ * "Today"), and we don't want to claim a single-date delivery for a real range.
+ */
+export function effectiveDateMode(
+  mode: DateMode,
+  primary: PredictionViewModel,
+): DateMode {
+  if (mode === 'range' && primary.earliestIso === primary.latestIso) {
+    return 'on';
+  }
+  return mode;
+}
+
 function pickSummaryTemplate(
   messages: WidgetMessages,
   mode: DateMode,
@@ -274,23 +293,22 @@ function buildSummary(
   primary: PredictionViewModel,
   config: ResolvedWidgetConfig,
 ): { text: string; dateText: string } {
-  const { dateMode } = config;
+  const dateMode = effectiveDateMode(config.dateMode, primary);
+  const collapsedRange = config.dateMode === 'range' && dateMode === 'on';
 
   const template = pickSummaryTemplate(config.messages, dateMode, primary.isGuaranteed);
 
   let dateText: string;
   switch (dateMode) {
     case 'on':
-      dateText = primary.mostLikelyDate;
+      // Collapsed-range case: keep the (single) range date, not most-likely.
+      dateText = collapsedRange ? primary.earliestDate : primary.mostLikelyDate;
       break;
     case 'by':
       dateText = primary.latestDate;
       break;
     case 'range':
-      dateText =
-        primary.earliestDate === primary.latestDate
-          ? primary.earliestDate
-          : `${primary.earliestDate} – ${primary.latestDate}`;
+      dateText = `${primary.earliestDate} – ${primary.latestDate}`;
       break;
     case 'from':
     default:

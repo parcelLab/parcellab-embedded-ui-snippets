@@ -114,6 +114,90 @@ describe('DeliveryPromise Widget', () => {
     widget.destroy();
   });
 
+  it('collapses dateMode=range to a single date when earliest equals latest', async () => {
+    globalThis.fetch = mockFetchResponse(successResponse([expressPrediction()]));
+    const { init } = await import('../src/index');
+    const widget = init({
+      target: container,
+      accountId: 18,
+      destinationCountry: 'DEU',
+      dateMode: 'range',
+    });
+
+    await vi.waitFor(() => {
+      // Falls back to the "on" template — single date, no duplicated span.
+      expect(container.textContent).toContain('Guaranteed delivery on');
+      expect(container.textContent).toContain('Monday, Apr 13');
+      expect(container.textContent).not.toMatch(/Monday, Apr 13\s*–/);
+    });
+    widget.destroy();
+  });
+
+  it('does not collapse range when ISO dates differ but format identically', async () => {
+    // With relative format, two distinct past ISO dates can both render as
+    // "Today". The collapse must look at ISO dates, not display strings.
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(now.getDate() - 2);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const prediction = makePrediction({
+      prediction: {
+        min: 1, max: 3, likely: 2,
+        send_date: iso(twoDaysAgo),
+        earliest_date: iso(twoDaysAgo),
+        latest_date: iso(yesterday),
+        most_likely_date: iso(yesterday),
+        earliest_locale: 'two days ago',
+        latest_locale: 'yesterday',
+        most_likely_locale: 'yesterday',
+        cutoff: 120,
+        cutoff_locale: '2 hours',
+      },
+    });
+
+    globalThis.fetch = mockFetchResponse(successResponse([prediction]));
+    const { init } = await import('../src/index');
+    const widget = init({
+      target: container,
+      accountId: 18,
+      destinationCountry: 'DEU',
+      dateMode: 'range',
+      dateFormat: 'relative',
+    });
+
+    await vi.waitFor(() => {
+      // Both dates fall back to short format ("relative" only kicks in for
+      // 0–7 days in the future), but they remain distinct strings — the key
+      // assertion is that we don't collapse to the "on" template.
+      expect(container.textContent).not.toContain('delivery on');
+      expect(container.textContent).toContain('Estimated delivery');
+    });
+    widget.destroy();
+  });
+
+  it('collapses card heading when range dates are equal', async () => {
+    globalThis.fetch = mockFetchResponse(successResponse([expressPrediction()]));
+    const { init } = await import('../src/index');
+    const widget = init({
+      target: container,
+      accountId: 18,
+      destinationCountry: 'DEU',
+      dateMode: 'range',
+      layout: 'card',
+    });
+
+    await vi.waitFor(() => {
+      const heading = container.querySelector('.pl-promise__card-heading');
+      const date = container.querySelector('.pl-promise__card-date');
+      expect(heading?.textContent).toBe('Guaranteed arrival');
+      expect(date?.textContent).toBe('Monday, Apr 13');
+    });
+    widget.destroy();
+  });
+
   it('renders dateMode=on with most-likely date', async () => {
     globalThis.fetch = mockFetchResponse(successResponse());
     const { init } = await import('../src/index');

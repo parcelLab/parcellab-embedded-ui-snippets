@@ -1,5 +1,5 @@
 import { iconForKind } from './icons';
-import { pickCardHeading } from './model';
+import { effectiveDateMode, pickCardHeading } from './model';
 import type {
   EmptyViewModel,
   ErrorViewModel,
@@ -547,7 +547,7 @@ function renderText(
     latest: makeBoldText(vm.primary.latestDate),
   };
 
-  const mode = config.dateMode;
+  const mode = effectiveDateMode(config.dateMode, vm.primary);
   const template = pickSummaryTemplateFromMessages(
     config.messages,
     mode,
@@ -731,7 +731,11 @@ function renderCard(
   const headingWrap = createElement(
     'div',
     `${ROOT_CLASS}__card-heading`,
-    pickCardHeading(config.messages, config.dateMode, vm.primary.isGuaranteed),
+    pickCardHeading(
+      config.messages,
+      effectiveDateMode(config.dateMode, vm.primary),
+      vm.primary.isGuaranteed,
+    ),
   );
   body.appendChild(headingWrap);
 
