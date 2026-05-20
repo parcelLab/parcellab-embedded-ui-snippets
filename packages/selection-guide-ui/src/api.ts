@@ -6,8 +6,20 @@ import {
 
 const responseCache = new Map<string, RecommendationApiResponse>();
 
+const SUPPORTED_LANGUAGE_CODES = new Set(['en', 'de', 'fr', 'it', 'es']);
+
+function resolveLanguageCode(locale: string): string {
+  const normalized = locale.toLowerCase().slice(0, 2);
+  return SUPPORTED_LANGUAGE_CODES.has(normalized) ? normalized : 'en';
+}
+
 function cacheKey(config: ResolvedWidgetConfig): string {
-  return `${config.apiBaseUrl}|${config.accountId}|${config.productId}`;
+  return [
+    config.apiBaseUrl,
+    config.accountId,
+    config.productId,
+    resolveLanguageCode(config.locale),
+  ].join('|');
 }
 
 export async function fetchRecommendation(
@@ -21,13 +33,14 @@ export async function fetchRecommendation(
     return cached;
   }
 
-  const productId = encodeURIComponent(config.productId);
   const url = new URL(
-    `/v4/size-recommender/recommendation/${productId}/`,
+    '/v4/size-recommender/recommendation/',
     config.apiBaseUrl,
   );
 
   url.searchParams.set('account_id', String(config.accountId));
+  url.searchParams.set('article_name', config.productId);
+  url.searchParams.set('language_code', resolveLanguageCode(config.locale));
 
   let response: Response;
 
