@@ -267,6 +267,7 @@ copyCodeButton?.addEventListener('click', () => {
     });
     element.addEventListener('change', () => {
       updateEmbedCodePreview();
+      void renderWidget();
     });
   });
 
