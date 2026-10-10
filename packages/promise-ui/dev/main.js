@@ -1,16 +1,16 @@
 /* Two preset banks. Each only touches its own group of fields, so users can
    mix-and-match (e.g. "US ZIP" data + "Card" presentation). */
 
-const DATA_FIELDS = ['country', 'postalCode', 'courier', 'serviceLevel', 'warehouse', 'locale', 'fallbackDays'];
+const DATA_FIELDS = ['country', 'postalCode', 'locationMode', 'courier', 'serviceLevel', 'warehouse', 'locale', 'fallbackDays'];
 const PRESENTATION_FIELDS = [
-  'layout', 'dateMode', 'zipPicker', 'showCutoff', 'icon',
+  'layout', 'dateMode', 'zipPicker', 'countryPicker', 'showCutoff', 'icon',
   'confidence', 'dateFormat', 'showCarrier', 'requireZip',
 ];
 
 const DATA_PRESETS = {
   minimal: {
-    name: 'Germany no zip',
-    notes: null,
+    name: 'PDP · Germany',
+    notes: 'For product pages before a ZIP is known. Request a country-level estimate for Germany; the ZIP picker stays empty.',
     cfg: {
       country: 'DEU',
       postalCode: '',
@@ -22,8 +22,8 @@ const DATA_PRESETS = {
     },
   },
   'pdp-range': {
-    name: 'Germany w/ zip',
-    notes: null,
+    name: 'Checkout · Germany + ZIP',
+    notes: 'For checkout with a known delivery address. Request an estimate for ZIP 81371 in Germany.',
     cfg: {
       country: 'DEU',
       postalCode: '81371',
@@ -35,8 +35,8 @@ const DATA_PRESETS = {
     },
   },
   'usa-no-zip': {
-    name: 'US no zip',
-    notes: null,
+    name: 'PDP · United States',
+    notes: 'For product pages before a ZIP is known. Request a country-level estimate for the United States; the ZIP picker stays empty.',
     cfg: {
       country: 'USA',
       postalCode: '',
@@ -48,8 +48,8 @@ const DATA_PRESETS = {
     },
   },
   'pdp-inline-zip': {
-    name: 'US w/ zip',
-    notes: null,
+    name: 'Checkout · US + ZIP',
+    notes: 'For checkout with a known delivery address. Request an estimate for ZIP 10038 in the United States.',
     cfg: {
       country: 'USA',
       postalCode: '10038',
@@ -60,9 +60,37 @@ const DATA_PRESETS = {
       fallbackDays: '',
     },
   },
+  'ip-germany': {
+    name: 'PDP · IP (Germany fallback)',
+    notes: 'For product pages before an address is known. Estimate the ZIP and country from your public IP; use Germany if resolution fails or no delivery method matches.',
+    cfg: {
+      locationMode: 'ip',
+      country: 'DEU',
+      postalCode: '',
+      courier: '',
+      serviceLevel: '',
+      warehouse: '',
+      locale: 'en',
+      fallbackDays: '',
+    },
+  },
+  'ip-usa': {
+    name: 'PDP · IP (US fallback)',
+    notes: 'For product pages before an address is known. Estimate the ZIP and country from your public IP; use the United States if resolution fails or no delivery method matches.',
+    cfg: {
+      locationMode: 'ip',
+      country: 'USA',
+      postalCode: '',
+      courier: '',
+      serviceLevel: '',
+      warehouse: '',
+      locale: 'en',
+      fallbackDays: '',
+    },
+  },
   'fallback-static': {
-    name: 'Invalid data',
-    notes: null,
+    name: 'Test · Invalid destination',
+    notes: 'Test an invalid ZIP and country. Show the configured static fallback of 2–3 business days.',
     cfg: {
       country: 'ZZZ',
       postalCode: '000000',
@@ -77,8 +105,8 @@ const DATA_PRESETS = {
 
 const PRESENTATION_PRESETS = {
   'text-default': {
-    name: 'Create urgency · PDP',
-    notes: 'Simple display with "as early as" with count down to create urgency.',
+    name: 'Minimal PDP',
+    notes: 'Delivery estimate and cutoff. Destination controls are hidden; the selected location still applies.',
     cfg: {
       layout: 'text',
       dateMode: 'from',
@@ -92,12 +120,13 @@ const PRESENTATION_PRESETS = {
     },
   },
   'text-zip-editor': {
-    name: 'Detailed info · PDP',
-    notes: 'Show detailed overview on PDP for maximum transparency.',
+    name: 'Standard PDP',
+    notes: 'Delivery date range, carrier, cutoff, and editable ZIP and country. IP estimates use a country fallback when needed.',
     cfg: {
       layout: 'text',
       dateMode: 'range',
       zipPicker: 'inline',
+      countryPicker: 'true',
       showCutoff: 'auto',
       icon: 'truck',
       confidence: 'estimated',
@@ -107,12 +136,13 @@ const PRESENTATION_PRESETS = {
     },
   },
   'require-zip': {
-    name: 'Delivery promise · PDP',
-    notes: '',
+    name: 'ZIP required · PDP',
+    notes: 'Show a delivery date after a ZIP is resolved or entered. A country-only fallback keeps the ZIP entry visible.',
     cfg: {
       layout: "text",
       dateMode: "by",
       zipPicker: "inline",
+      countryPicker: 'true',
       showCutoff: "auto",
       locale: "en",
       icon: "none",
@@ -183,6 +213,8 @@ function renderPresetButtons(host, presets) {
     btn.type = 'button';
     btn.dataset.preset = key;
     btn.textContent = preset.name;
+    btn.title = preset.notes;
+    btn.setAttribute('aria-description', preset.notes);
     btn.className =
       'preset text-xs font-semibold px-3 h-8 rounded-lg border border-navy-200 bg-navy-50 text-navy-500 hover:bg-navy-100 transition-colors cursor-pointer';
     host.appendChild(btn);
@@ -222,16 +254,20 @@ function parseFallbackDays(raw) {
 }
 
 function currentConfig() {
+  const mode = el('location-mode').value;
+  const country = el('country').value.trim().toUpperCase() || 'DEU';
   return {
     accountId: el('account-id').value || '1612197',
-    destinationCountry: el('country').value || 'DEU',
-    postalCode: el('postal-code').value.trim(),
+    destinationCountry: country,
+    postalCode: mode === 'postal' ? el('postal-code').value.trim() : '',
+    ipFetch: mode === 'ip',
     courier: el('courier').value.trim(),
     serviceLevel: el('service-level').value.trim(),
     warehouse: el('warehouse').value.trim(),
     layout: el('layout').value,
     dateMode: el('date-mode').value,
     zipPicker: el('zip-picker').value,
+    countryPicker: el('country-picker').value === 'true',
     showCutoff: el('show-cutoff').value,
     locale: el('locale').value,
     icon: el('icon').value,
@@ -239,7 +275,7 @@ function currentConfig() {
     dateFormat: el('date-format').value,
     fallbackDaysRaw: el('fallback-days').value,
     showCarrier: el('show-carrier').value,
-    requireZip: el('require-zip').value === 'true',
+    requireZip: el('require-zip').value === 'true' && el('zip-picker').value !== 'none',
     selectionReferenceDate: el('selection-reference-date').value,
     selectionPick: el('selection-pick').value,
   };
@@ -248,6 +284,7 @@ function currentConfig() {
 const FIELD_ID_MAP = {
   country: 'country',
   postalCode: 'postal-code',
+  locationMode: 'location-mode',
   courier: 'courier',
   serviceLevel: 'service-level',
   warehouse: 'warehouse',
@@ -256,6 +293,7 @@ const FIELD_ID_MAP = {
   layout: 'layout',
   dateMode: 'date-mode',
   zipPicker: 'zip-picker',
+  countryPicker: 'country-picker',
   showCutoff: 'show-cutoff',
   icon: 'icon',
   confidence: 'confidence',
@@ -279,7 +317,7 @@ function applyDataPreset(key) {
   if (!preset) return;
   activeData = key;
   clearPersistedZip();
-  applyFieldsToInputs(preset.cfg);
+  applyFieldsToInputs({ locationMode: preset.cfg.postalCode ? 'postal' : 'country', ...preset.cfg });
   refreshPresetButtons();
   previewNotes.textContent = preset.notes;
   renderWidget();
@@ -289,7 +327,7 @@ function applyPresentationPreset(key) {
   const preset = PRESENTATION_PRESETS[key];
   if (!preset) return;
   activePresentation = key;
-  applyFieldsToInputs(preset.cfg);
+  applyFieldsToInputs({ countryPicker: 'false', ...preset.cfg });
   refreshPresetButtons();
   previewNotes.textContent = preset.notes;
   renderWidget();
@@ -308,12 +346,14 @@ function buildInitConfig(c) {
     accountId: c.accountId,
     destinationCountry: c.destinationCountry,
     postalCode: c.postalCode,
+    ipFetch: c.ipFetch,
     courier: c.courier,
     serviceLevel: c.serviceLevel,
     warehouse: c.warehouse,
     layout: c.layout,
     dateMode: c.dateMode,
     zipPicker: c.zipPicker,
+    countryPicker: c.countryPicker,
     showCutoff: c.showCutoff,
     locale: c.locale,
     icon: c.icon,
@@ -330,6 +370,9 @@ function buildInitConfig(c) {
 }
 
 function renderWidget() {
+  const mode = el('location-mode').value;
+  el('postal-code-field').style.display = mode === 'postal' ? '' : 'none';
+  el('ip-fetch-hint').style.display = mode === 'ip' ? '' : 'none';
   const config = currentConfig();
 
   if (widget) {
@@ -348,21 +391,31 @@ function renderWidget() {
   }
 
   updateEmbedCode();
+  const sampleUrl = new URL(buildApiUrl(config, config.ipFetch ? '8.8.8.8' : ''));
+  el('sample-request').textContent = `GET ${sampleUrl.pathname}${sampleUrl.search}`;
+  el('sample-request-note').textContent = config.ipFetch
+    ? '8.8.8.8 is an example IP. The preview uses your public IP and the configured country as its fallback.'
+    : config.postalCode ? 'Use a known delivery address, for example at checkout.' : 'Use a country-level estimate before a ZIP is known, for example on a product page.';
   scheduleApiPanelUpdate();
 }
 
-function buildApiUrl(c) {
-  const url = new URL('/v4/promise/prediction/predict/', API_BASE_URL);
-  url.searchParams.set('account', String(c.accountId));
-  url.searchParams.set(
-    'destination_country_iso3',
-    (c.destinationCountry || '').toUpperCase(),
-  );
-  if (c.postalCode) url.searchParams.set('destination_postal_code', c.postalCode);
+function buildApiUrl(c, destinationIp = '') {
+  const url = new URL('/v2/prediction', API_BASE_URL);
+  const country = (c.destinationCountry || '').toUpperCase();
+  const destination = c.postalCode
+    ? `${c.postalCode}_${country}`
+    : c.ipFetch && destinationIp
+      ? destinationIp
+      : country;
+  url.searchParams.set('user', String(c.accountId));
+  url.searchParams.set('destination', destination);
+  if (!c.postalCode && c.ipFetch && destinationIp) {
+    url.searchParams.set('fallbackCountry', country);
+  }
   if (c.courier) url.searchParams.set('courier', c.courier);
-  if (c.serviceLevel) url.searchParams.set('service_level', c.serviceLevel);
+  if (c.serviceLevel) url.searchParams.set('courierServiceLevel', c.serviceLevel);
   if (c.warehouse) url.searchParams.set('warehouse', c.warehouse);
-  if (c.locale) url.searchParams.set('language_iso2', c.locale);
+  if (c.locale) url.searchParams.set('lang', c.locale);
   return url.toString();
 }
 
@@ -400,7 +453,7 @@ async function updateApiPanel({ bypassCache = false } = {}) {
     return;
   }
 
-  if (c.requireZip && !c.postalCode) {
+  if (c.requireZip && !c.postalCode && !c.ipFetch) {
     apiMethodEl.textContent = '';
     apiRequestUrlEl.textContent = '— call skipped —';
     apiResponseEl.textContent =
@@ -409,7 +462,32 @@ async function updateApiPanel({ bypassCache = false } = {}) {
     return;
   }
 
-  const url = buildApiUrl(c);
+  apiAbortController?.abort();
+  apiAbortController = new AbortController();
+  const signal = apiAbortController.signal;
+  let destinationIp = '';
+  if (c.ipFetch && !c.postalCode) {
+    setApiStatus('Looking up IP…', 'loading');
+    try {
+      const response = await fetch('https://api64.ipify.org?format=json', {
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+      });
+      if (response.ok) destinationIp = (await response.json()).ip ?? '';
+    } catch {
+      // Use the fallback country if the IP lookup fails.
+    }
+    if (signal.aborted) return;
+    if (c.requireZip && !destinationIp) {
+      apiRequestUrlEl.textContent = '— call skipped —';
+      apiResponseEl.textContent = 'No postal code or public IP is available.';
+      setApiStatus('Skipped', 'info');
+      return;
+    }
+  }
+
+  const url = buildApiUrl(c, destinationIp);
   apiMethodEl.textContent = 'GET';
   apiRequestUrlEl.textContent = url;
 
@@ -425,9 +503,6 @@ async function updateApiPanel({ bypassCache = false } = {}) {
     }
   }
 
-  apiAbortController?.abort();
-  apiAbortController = new AbortController();
-  const signal = apiAbortController.signal;
   setApiStatus('Loading…', 'loading');
   apiResponseEl.textContent = '';
 
@@ -525,12 +600,14 @@ function htmlEmbedSnippet(c) {
     `data-account-id="${escapeAttribute(c.accountId)}"`,
     `data-country="${escapeAttribute(c.destinationCountry)}"`,
     `data-postal-code="${escapeAttribute(c.postalCode)}"`,
+    `data-ip-fetch="${c.ipFetch ? 'true' : 'false'}"`,
     `data-courier="${escapeAttribute(c.courier)}"`,
     `data-service-level="${escapeAttribute(c.serviceLevel)}"`,
     `data-warehouse="${escapeAttribute(c.warehouse)}"`,
     `data-layout="${c.layout}"`,
     `data-date-mode="${c.dateMode}"`,
     `data-zip-picker="${c.zipPicker}"`,
+    `data-country-picker="${c.countryPicker ? 'true' : 'false'}"`,
     `data-show-cutoff="${c.showCutoff}"`,
     `data-locale="${c.locale}"`,
     `data-icon="${c.icon}"`,
@@ -560,12 +637,14 @@ function jsEmbedSnippet(c) {
     `  accountId: ${JSON.stringify(c.accountId)}`,
     `  destinationCountry: ${JSON.stringify(c.destinationCountry)}`,
     `  postalCode: ${JSON.stringify(c.postalCode)}`,
+    `  ipFetch: ${c.ipFetch ? 'true' : 'false'}`,
     `  courier: ${JSON.stringify(c.courier)}`,
     `  serviceLevel: ${JSON.stringify(c.serviceLevel)}`,
     `  warehouse: ${JSON.stringify(c.warehouse)}`,
     `  layout: ${JSON.stringify(c.layout)}`,
     `  dateMode: ${JSON.stringify(c.dateMode)}`,
     `  zipPicker: ${JSON.stringify(c.zipPicker)}`,
+    `  countryPicker: ${c.countryPicker ? 'true' : 'false'}`,
     `  showCutoff: ${JSON.stringify(c.showCutoff)}`,
     `  locale: ${JSON.stringify(c.locale)}`,
     `  icon: ${JSON.stringify(c.icon)}`,
@@ -603,10 +682,10 @@ function updateEmbedModeButtons() {
 }
 
 const controlIds = [
-  'account-id', 'country', 'postal-code',
+  'account-id', 'country', 'postal-code', 'location-mode',
   'courier', 'service-level', 'warehouse',
   'layout', 'date-mode',
-  'zip-picker', 'show-cutoff', 'locale',
+  'zip-picker', 'country-picker', 'show-cutoff', 'locale',
   'icon', 'confidence', 'date-format',
   'fallback-days', 'show-carrier',
   'require-zip',
@@ -659,5 +738,7 @@ copyCodeButton.addEventListener('click', async () => {
 });
 
 updateEmbedModeButtons();
-applyDataPreset('minimal');
-applyPresentationPreset('text-default');
+clearPersistedZip();
+activeData = 'ip-germany';
+applyFieldsToInputs(DATA_PRESETS[activeData].cfg);
+applyPresentationPreset('text-zip-editor');

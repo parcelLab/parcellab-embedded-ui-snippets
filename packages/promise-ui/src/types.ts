@@ -88,8 +88,11 @@ export interface WidgetMessages {
 
   // Deliver-to label
   deliverTo: string;
+  automaticLocation: string;
+  deliveryCountry: string;
 
   // Zip picker
+  addZip: string;
   zipPromptCta: string;
   zipPromptHint: string;
   zipPlaceholder: string;
@@ -111,8 +114,11 @@ export interface WidgetMessages {
 export interface WidgetConfig {
   target: WidgetTarget;
   accountId: number | string;
+  // Destination country, also used as the fallback for IP resolution.
   destinationCountry: string;
   postalCode?: string;
+  // Fetch the public IP only when no postal code is available.
+  ipFetch?: boolean;
 
   // Filter fields composed into the API call
   courier?: string;
@@ -125,7 +131,9 @@ export interface WidgetConfig {
   // Presentation
   layout?: LayoutMode;
   dateMode?: DateMode;
+  // 'none' hides the whole location row, including the country picker.
   zipPicker?: ZipPickerMode;
+  countryPicker?: boolean;
   showCutoff?: CutoffVisibility;
   icon?: IconKind;
   showPrice?: boolean;  // placeholder — host-provided, not from API
@@ -136,8 +144,7 @@ export interface WidgetConfig {
   dateFormat?: DateFormat;
   // 'inline' renders "via DHL" next to the summary; 'none' hides the carrier
   showCarrier?: CarrierDisplay | boolean;
-  // When true and no postal code is set, render a "Get delivery date" CTA instead of
-  // calling the API at country level. Replaces the old layout='link'.
+  // Require a ZIP when the location row is visible; try IP Fetch first if enabled.
   requireZip?: boolean;
 
   // Static fallback shown when the API errors out, e.g. 3 → "Delivery in 3 business days"
@@ -168,6 +175,7 @@ export interface ResolvedWidgetConfig {
   accountId: number;
   destinationCountry: string;
   postalCode: string;
+  ipFetch: boolean;
 
   courier: string;
   serviceLevel: string;
@@ -179,6 +187,7 @@ export interface ResolvedWidgetConfig {
   layout: LayoutMode;
   dateMode: DateMode;
   zipPicker: ZipPickerMode;
+  countryPicker: boolean;
   showCutoff: CutoffVisibility;
   icon: IconKind;
   showPrice: boolean;
@@ -221,41 +230,50 @@ export interface PredictionDetail {
   max: number;
   likely: number;
   send_date: string;
-  earliest_date: string;
-  latest_date: string;
-  most_likely_date: string;
-  earliest_locale: string;
-  latest_locale: string;
-  most_likely_locale: string;
+  earliest: string;
+  latest: string;
+  mostLikely: string;
+  earliestLocale: string;
+  latestLocale: string;
+  mostLikelyLocale: string;
   cutoff: number;
-  cutoff_locale: string;
+  cutoffLocale: string;
 }
 
 export interface PredictionEntry {
   id: string;
   warehouse: string;
   courier: string;
-  courier_name: string;
-  courier_alias: string[];
-  courier_service_level: string[];
+  courierName: string;
+  courierAlias: string[];
+  courierServiceLevel: string[];
   prediction: PredictionDetail;
 }
 
+export interface PromiseLocation {
+  country: string;
+  region: string;
+  zip: string | null;
+}
+
 export interface PromiseApiResponse {
-  request_id: string;
+  requestId: string;
   success: boolean;
   error?: string;
   prediction: PredictionEntry[];
+  location?: PromiseLocation | null;
 }
 
 export type FetchErrorCode = 'not-found' | 'bad-request' | 'network';
 
 export class FetchError extends Error {
   code: FetchErrorCode;
+  location: PromiseLocation | null;
 
-  constructor(code: FetchErrorCode, message: string) {
+  constructor(code: FetchErrorCode, message: string, location: PromiseLocation | null = null) {
     super(message);
     this.code = code;
+    this.location = location;
   }
 }
 
@@ -292,6 +310,7 @@ export interface ReadyViewModel {
   summaryDateText: string;
   postalCode: string;
   country: string;
+  locationEstimated: boolean;
 }
 
 export interface LinkViewModel {

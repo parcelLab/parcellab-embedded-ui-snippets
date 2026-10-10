@@ -6,7 +6,7 @@ import {
 
 const responseCache = new Map<string, PromiseApiResponse>();
 
-function cacheKey(config: ResolvedWidgetConfig): string {
+function cacheKey(config: ResolvedWidgetConfig, destinationIp: string): string {
   return [
     config.apiBaseUrl,
     config.accountId,
@@ -19,27 +19,66 @@ function cacheKey(config: ResolvedWidgetConfig): string {
     config.tag,
     config.draft,
     config.locale,
+    destinationIp,
   ].join('|');
+}
+
+export async function fetchPublicIp(signal: AbortSignal): Promise<string> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener('abort', abort, { once: true });
+  const timeout = setTimeout(abort, 3000);
+
+  try {
+    if (signal.aborted) return '';
+    const response = await fetch('https://api64.ipify.org?format=json', {
+      headers: { Accept: 'application/json' },
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: controller.signal,
+    });
+    if (!response.ok) return '';
+    const { ip } = await response.json();
+    if (typeof ip !== 'string') return '';
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+      return ip.split('.').every((part) => Number(part) <= 255) ? ip : '';
+    }
+    if (/^[\da-f:.]+$/i.test(ip) && ip.includes(':')) {
+      new URL(`http://[${ip}]/`);
+      return ip;
+    }
+    return '';
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener('abort', abort);
+  }
 }
 
 export async function fetchPrediction(
   config: ResolvedWidgetConfig,
   signal: AbortSignal,
+  destinationIp = '',
 ): Promise<PromiseApiResponse> {
-  const key = cacheKey(config);
+  const key = cacheKey(config, destinationIp);
   const cached = responseCache.get(key);
 
   if (cached) {
     return cached;
   }
 
-  const url = new URL('/v4/promise/prediction/predict/', config.apiBaseUrl);
+  const url = new URL('/v2/prediction', config.apiBaseUrl);
+  const destination = config.postalCode
+    ? `${config.postalCode}_${config.destinationCountry}`
+    : config.ipFetch && destinationIp
+      ? destinationIp
+      : config.destinationCountry;
 
-  url.searchParams.set('account', String(config.accountId));
-  url.searchParams.set('destination_country_iso3', config.destinationCountry);
-
-  if (config.postalCode) {
-    url.searchParams.set('destination_postal_code', config.postalCode);
+  url.searchParams.set('user', String(config.accountId));
+  url.searchParams.set('destination', destination);
+  if (!config.postalCode && config.ipFetch && destinationIp) {
+    url.searchParams.set('fallbackCountry', config.destinationCountry);
   }
 
   if (config.courier) {
@@ -47,7 +86,7 @@ export async function fetchPrediction(
   }
 
   if (config.serviceLevel) {
-    url.searchParams.set('service_level', config.serviceLevel);
+    url.searchParams.set('courierServiceLevel', config.serviceLevel);
   }
 
   if (config.warehouse) {
@@ -59,7 +98,7 @@ export async function fetchPrediction(
   }
 
   if (config.locale) {
-    url.searchParams.set('language_iso2', config.locale);
+    url.searchParams.set('lang', config.locale);
   }
 
   if (config.draft) {
@@ -89,15 +128,14 @@ export async function fetchPrediction(
   }
 
   if (response.status === 400) {
-    const body = await response.json().catch(() => null) as {
-      errors?: Array<{ detail?: string }>;
-    } | null;
-    const detail = body?.errors?.[0]?.detail ?? 'Bad request.';
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    const detail = body?.error ?? 'Bad request.';
     throw new FetchError('bad-request', detail);
   }
 
   if (response.status === 404) {
-    throw new FetchError('not-found', 'Prediction not found.');
+    const body = await response.json().catch(() => null) as PromiseApiResponse | null;
+    throw new FetchError('not-found', 'Prediction not found.', body?.location ?? null);
   }
 
   if (!response.ok) {
@@ -107,7 +145,7 @@ export async function fetchPrediction(
   const payload = (await response.json()) as PromiseApiResponse;
 
   if (!payload.success) {
-    throw new FetchError('network', payload.error ?? 'Prediction failed.');
+    throw new FetchError('network', payload.error ?? 'Prediction failed.', payload.location ?? null);
   }
 
   responseCache.set(key, payload);

@@ -1,4 +1,5 @@
-import { iconForKind } from './icons';
+import { currentLocationIconSvg, iconForKind } from './icons';
+import { getCountries } from './countries';
 import { effectiveDateMode, pickCardHeading } from './model';
 import type {
   EmptyViewModel,
@@ -98,7 +99,8 @@ const STYLES = `
     color: var(--plp-muted-text);
   }
 
-  .${ROOT_CLASS}__zip-inline {
+  .${ROOT_CLASS}__zip-inline,
+  .${ROOT_CLASS}__country-inline {
     color: var(--plp-link);
     text-decoration: underline;
     text-decoration-style: dotted;
@@ -111,9 +113,45 @@ const STYLES = `
     transition: color 0.15s ease;
   }
 
-  .${ROOT_CLASS}__zip-inline:hover {
+  .${ROOT_CLASS}__location-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    margin-left: 0.3em;
+  }
+
+  .${ROOT_CLASS}__card-meta .${ROOT_CLASS}__deliver-to,
+  .${ROOT_CLASS}__badge .${ROOT_CLASS}__deliver-to {
+    margin-top: 0;
+    font-size: inherit;
+  }
+
+  .${ROOT_CLASS}__zip-inline:hover,
+  .${ROOT_CLASS}__country-inline:hover {
     text-decoration-style: solid;
     color: var(--plp-accent);
+  }
+
+  .${ROOT_CLASS}__country-inline {
+    display: inline-block;
+    position: relative;
+    margin-left: 0.35em;
+  }
+
+  .${ROOT_CLASS}__country-inline:focus-within {
+    outline: 2px solid var(--plp-accent);
+    outline-offset: 2px;
+  }
+
+  .${ROOT_CLASS}__country-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    font: inherit;
+    cursor: pointer;
   }
 
   .${ROOT_CLASS}__zip-form {
@@ -454,7 +492,7 @@ function renderZipInlineButton(
     host.textContent = '';
     const btn = createElement('button', `${ROOT_CLASS}__zip-inline`);
     btn.type = 'button';
-    btn.textContent = currentZip || config.messages.zipPromptCta;
+    btn.textContent = currentZip || config.messages.addZip;
     btn.setAttribute('aria-label', config.messages.zipPromptHint);
     btn.addEventListener('click', () => {
       renderForm();
@@ -602,28 +640,45 @@ function pickSummaryTemplateFromMessages(
 /**
  * Below the summary:
  *   - with zip:    "Deliver to <10038>"  (10038 editable when zipPicker=inline)
- *   - without zip + inline picker: just the "Get delivery date" CTA
+ *   - without zip + inline picker: "Deliver to <country> · <Add ZIP>"
  *   - without zip + no inline picker: nothing
  */
 function appendDeliverToLine(
   container: HTMLElement,
-  vm: ReadyViewModel,
+  vm: Pick<ReadyViewModel, 'postalCode' | 'country' | 'locationEstimated'>,
   config: ResolvedWidgetConfig,
   onZipChange: ((zip: string) => void) | null,
 ): void {
   const wantsInline = config.zipPicker === 'inline' && onZipChange;
-  if (!vm.postalCode && !wantsInline) return;
+  if (config.zipPicker === 'none' || (!vm.postalCode && !wantsInline && !vm.locationEstimated && !config.countryPicker)) return;
 
   const line = createElement('span', `${ROOT_CLASS}__deliver-to`);
 
+  line.textContent = `${config.messages.deliverTo} `;
   if (vm.postalCode) {
-    line.textContent = `${config.messages.deliverTo} `;
     if (wantsInline) {
       line.appendChild(renderZipInlineButton(config, vm.postalCode, onZipChange!));
     } else {
       line.appendChild(document.createTextNode(vm.postalCode));
     }
-  } else {
+  }
+  if (!config.countryPicker && (vm.locationEstimated || !vm.postalCode)) {
+    const country = getCountries(config.locale).find(({ code }) => code === vm.country)?.name ?? vm.country;
+    line.appendChild(document.createTextNode(`${vm.postalCode ? ' ' : ''}${country}`));
+  }
+  if (vm.locationEstimated) {
+    const marker = createElement('span', `${ROOT_CLASS}__location-estimated`);
+    const label = config.messages.automaticLocation;
+    marker.title = label;
+    marker.setAttribute('role', 'img');
+    marker.setAttribute('aria-label', label);
+    const icon = currentLocationIconSvg();
+    icon.classList.add(`${ROOT_CLASS}__location-icon`);
+    marker.appendChild(icon);
+    line.appendChild(marker);
+  }
+  if (wantsInline && !vm.postalCode) {
+    line.appendChild(document.createTextNode(' · '));
     line.appendChild(renderZipInlineButton(config, '', onZipChange!));
   }
 
@@ -775,19 +830,8 @@ function renderCard(
   }
 
   const wantsInline = config.zipPicker === 'inline' && onZipChange;
-  if (vm.postalCode || wantsInline) {
-    const zipSpan = createElement('span');
-    if (vm.postalCode) {
-      zipSpan.textContent = `${config.messages.deliverTo} `;
-      if (wantsInline) {
-        zipSpan.appendChild(renderZipInlineButton(config, vm.postalCode, onZipChange!));
-      } else {
-        zipSpan.appendChild(document.createTextNode(vm.postalCode));
-      }
-    } else {
-      zipSpan.appendChild(renderZipInlineButton(config, '', onZipChange!));
-    }
-    meta.appendChild(zipSpan);
+  if (config.zipPicker !== 'none' && (vm.postalCode || wantsInline || vm.locationEstimated || config.countryPicker)) {
+    appendDeliverToLine(meta, vm, config, onZipChange);
     metaUsed = true;
   }
 
@@ -800,6 +844,7 @@ function renderCard(
 function renderBadge(
   vm: ReadyViewModel,
   config: ResolvedWidgetConfig,
+  onZipChange: ((zip: string) => void) | null,
 ): HTMLElement {
   const urgent =
     vm.primary.cutoffUrgency === 'high' ||
@@ -820,6 +865,7 @@ function renderBadge(
   }
 
   badge.appendChild(document.createTextNode(pickDateText(vm)));
+  appendDeliverToLine(badge, vm, config, onZipChange);
   return badge;
 }
 
@@ -909,6 +955,7 @@ export class WidgetRenderer {
   private host: HTMLElement;
   private root: HTMLElement | null = null;
   private onZipChange: ((zip: string) => void) | null = null;
+  private onCountryChange: ((country: string) => void) | null = null;
 
   constructor(host: HTMLElement) {
     this.host = host;
@@ -918,7 +965,11 @@ export class WidgetRenderer {
     this.onZipChange = handler;
   }
 
-  render(config: ResolvedWidgetConfig, viewModel: ViewModel): void {
+  setCountryChangeHandler(handler: (country: string) => void): void {
+    this.onCountryChange = handler;
+  }
+
+  render(config: ResolvedWidgetConfig, viewModel: ViewModel, locationEstimated = false): void {
     ensureStyles();
 
     if (viewModel.state === 'hidden') {
@@ -952,14 +1003,14 @@ export class WidgetRenderer {
         if (config.layout === 'card') {
           root.appendChild(renderCard(viewModel, config, this.onZipChange));
         } else if (config.layout === 'badge') {
-          root.appendChild(renderBadge(viewModel, config));
+          root.appendChild(renderBadge(viewModel, config, this.onZipChange));
         } else {
           root.appendChild(renderText(viewModel, config, this.onZipChange));
         }
         break;
 
       case 'link':
-        root.appendChild(renderLink(viewModel, config, this.onZipChange));
+        if (config.zipPicker === 'link') root.appendChild(renderLink(viewModel, config, this.onZipChange));
         break;
 
       case 'fallback':
@@ -973,6 +1024,38 @@ export class WidgetRenderer {
       case 'error':
         root.appendChild(renderError(viewModel));
         break;
+    }
+
+    if (viewModel.state !== 'ready' && config.zipPicker !== 'none') {
+      appendDeliverToLine(root, {
+        postalCode: config.postalCode,
+        country: config.destinationCountry,
+        locationEstimated,
+      }, config, this.onZipChange);
+    }
+    if (config.zipPicker !== 'none' && config.countryPicker && this.onCountryChange) {
+      const line = root.querySelector(`.${ROOT_CLASS}__deliver-to`)!;
+      const control = createElement('span', `${ROOT_CLASS}__country-inline`);
+      const select = createElement('select', `${ROOT_CLASS}__country-select`) as HTMLSelectElement;
+      select.setAttribute('aria-label', config.messages.deliveryCountry);
+      const countries = getCountries(config.locale);
+      if (!countries.some(({ code }) => code === config.destinationCountry)) {
+        countries.unshift({ code: config.destinationCountry, name: config.destinationCountry });
+      }
+      for (const { code, name } of countries) {
+        select.add(new Option(name, code, false, code === config.destinationCountry));
+      }
+      const label = createElement('span', undefined, select.selectedOptions[0]?.textContent ?? config.destinationCountry);
+      label.setAttribute('aria-hidden', 'true');
+      select.addEventListener('change', () => {
+        label.textContent = select.selectedOptions[0]?.textContent ?? '';
+        this.onCountryChange?.(select.value);
+      });
+      control.appendChild(label);
+      control.appendChild(select);
+      const emptyZipSeparator = !config.postalCode
+        ? line.querySelector(`.${ROOT_CLASS}__zip-inline`)?.parentElement?.previousSibling ?? null : null;
+      line.insertBefore(control, line.querySelector(`.${ROOT_CLASS}__location-estimated`) ?? emptyZipSeparator);
     }
   }
 

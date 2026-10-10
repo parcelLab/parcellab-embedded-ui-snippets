@@ -41,6 +41,14 @@ export function calendarIconSvg(): SVGSVGElement {
   return root;
 }
 
+export function currentLocationIconSvg(): SVGSVGElement {
+  const root = svg('0 0 24 24');
+  appendPath(root, 'M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0');
+  appendPath(root, 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0');
+  appendPath(root, 'M12 2l0 2M12 20l0 2M20 12l2 0M2 12l2 0');
+  return root;
+}
+
 export function iconForKind(kind: IconKind): SVGSVGElement | null {
   if (kind === 'truck') return truckIconSvg();
   if (kind === 'calendar') return calendarIconSvg();

@@ -1,18 +1,32 @@
-import { fetchPrediction } from './api';
+import { fetchPrediction, fetchPublicIp } from './api';
 import { readConfigFromElement, resolveConfig } from './config';
 import { handleFetchError, linkViewModel, readyViewModel } from './model';
 import { WidgetRenderer } from './render';
-import type {
-  ResolvedWidgetConfig,
-  ViewModel,
-  WidgetInitOptions,
-  WidgetInstance,
-  WidgetUpdateOptions,
+import {
+  FetchError,
+  type PromiseLocation,
+  type ResolvedWidgetConfig,
+  type ViewModel,
+  type WidgetInitOptions,
+  type WidgetInstance,
+  type WidgetUpdateOptions,
 } from './types';
 
 const registry = new WeakMap<HTMLElement, DeliveryPromiseWidget>();
 
 const ZIP_STORAGE_KEY = 'pl-promise-zip';
+
+function readLocation(value: unknown): PromiseLocation | null {
+  if (!value || typeof value !== 'object') return null;
+  const location = value as Partial<PromiseLocation>;
+  if (typeof location.country !== 'string' || !/^[A-Z]{3}$/.test(location.country) ||
+      (location.zip !== null && typeof location.zip !== 'string')) return null;
+  return {
+    country: location.country,
+    region: typeof location.region === 'string' ? location.region : '',
+    zip: location.zip === '0' ? null : location.zip,
+  };
+}
 
 function loadingViewModel(config: ResolvedWidgetConfig): ViewModel {
   return {
@@ -21,19 +35,31 @@ function loadingViewModel(config: ResolvedWidgetConfig): ViewModel {
   };
 }
 
-function persistZip(zip: string): void {
+function persistZip(postalCode: string, destinationCountry: string): void {
   try {
-    localStorage.setItem(ZIP_STORAGE_KEY, zip);
+    localStorage.setItem(ZIP_STORAGE_KEY, JSON.stringify({ postalCode, destinationCountry }));
   } catch {
     // localStorage may be unavailable
   }
 }
 
-function loadPersistedZip(): string {
+function loadPersistedZip(): { postalCode: string; destinationCountry?: string } {
   try {
-    return localStorage.getItem(ZIP_STORAGE_KEY) ?? '';
+    const stored = localStorage.getItem(ZIP_STORAGE_KEY) ?? '';
+    // Keep postal codes saved by earlier versions.
+    if (!stored.startsWith('{')) return { postalCode: stored };
+    const destination = JSON.parse(stored);
+    if (typeof destination.postalCode === 'string' &&
+        typeof destination.destinationCountry === 'string' &&
+        /^[A-Z]{3}$/.test(destination.destinationCountry)) {
+      return {
+        postalCode: destination.postalCode,
+        destinationCountry: destination.destinationCountry,
+      };
+    }
+    return { postalCode: '' };
   } catch {
-    return '';
+    return { postalCode: '' };
   }
 }
 
@@ -44,14 +70,18 @@ export class DeliveryPromiseWidget implements WidgetInstance {
   private abortController: AbortController | null = null;
   private requestId = 0;
   private destroyed = false;
+  private estimatedLocation: PromiseLocation | null = null;
+  private countrySelected = false;
 
   constructor(input: WidgetInitOptions) {
     this.input = { ...input };
 
     if (!this.input.postalCode) {
       const persisted = loadPersistedZip();
-      if (persisted) {
-        this.input.postalCode = persisted;
+      if (persisted.postalCode || persisted.destinationCountry) {
+        this.input.postalCode = persisted.postalCode;
+        this.input.destinationCountry = persisted.destinationCountry ?? this.input.destinationCountry;
+        this.countrySelected = !!persisted.destinationCountry;
       }
     }
 
@@ -60,14 +90,22 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     this.renderer.setZipChangeHandler((zip) => {
       void this.handleZipChange(zip);
     });
+    this.renderer.setCountryChangeHandler((country) => {
+      persistZip('', country);
+      void this.update({ destinationCountry: country, postalCode: '' });
+    });
     registry.set(this.config.target, this);
     this.config.target.dataset.promiseActive = 'true';
     this.renderer.render(this.config, loadingViewModel(this.config));
   }
 
   private async handleZipChange(zip: string): Promise<void> {
-    persistZip(zip);
-    await this.update({ postalCode: zip });
+    const country = this.estimatedLocation?.country ?? this.config.destinationCountry;
+    persistZip(zip, country);
+    await this.update({
+      postalCode: zip,
+      destinationCountry: country,
+    });
   }
 
   async refresh(): Promise<void> {
@@ -76,26 +114,72 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     const currentRequestId = this.requestId;
     this.abortController?.abort();
     this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+    let config = this.estimatedLocation
+      ? {
+          ...this.config,
+          destinationCountry: this.estimatedLocation.country,
+          postalCode: this.estimatedLocation.zip ?? '',
+        }
+      : this.config;
+    const resolvingIp = config.ipFetch && !config.postalCode && !this.estimatedLocation && !this.countrySelected;
+    const fallbackLocation: PromiseLocation = { country: config.destinationCountry, region: '', zip: null };
 
-    // requireZip without a postal code: show CTA, skip API call entirely
-    if (this.config.requireZip && !this.config.postalCode) {
-      this.renderer.render(this.config, linkViewModel(this.config));
+    if (config.requireZip && !config.postalCode && (!config.ipFetch || this.countrySelected)) {
+      this.renderer.render(config, linkViewModel(config), this.estimatedLocation !== null);
       return;
     }
 
-    this.renderer.render(this.config, loadingViewModel(this.config));
+    this.renderer.render(config, loadingViewModel(config), this.estimatedLocation !== null);
 
     try {
-      const response = await fetchPrediction(
-        this.config,
-        this.abortController.signal,
-      );
+      let destinationIp = resolvingIp ? await fetchPublicIp(signal) : '';
+      if (signal.aborted) return;
+      if (resolvingIp && !destinationIp) this.estimatedLocation = fallbackLocation;
+      if (config.requireZip && !config.postalCode && !destinationIp) {
+        this.renderer.render(config, linkViewModel(config), this.estimatedLocation !== null);
+        return;
+      }
+
+      let response;
+      try {
+        response = await fetchPrediction(config, signal, destinationIp);
+      } catch (error) {
+        if (!destinationIp || !(error instanceof FetchError) || error.code !== 'not-found') {
+          throw error;
+        }
+        if (signal.aborted) return;
+        if (readLocation(error.location)) {
+          response = { requestId: '', success: false, prediction: [], location: error.location };
+        } else {
+          this.estimatedLocation = fallbackLocation;
+          if (config.requireZip) {
+            this.renderer.render(config, linkViewModel(config), true);
+            return;
+          }
+          destinationIp = '';
+          response = await fetchPrediction(config, signal);
+        }
+      }
 
       if (this.destroyed || currentRequestId !== this.requestId) {
         return;
       }
 
-      this.renderer.render(this.config, readyViewModel(response, this.config));
+      const location = readLocation(response.location);
+      if (resolvingIp && location) {
+        this.estimatedLocation = location;
+        config = {
+          ...config,
+          destinationCountry: location.country,
+          postalCode: this.estimatedLocation.zip ?? '',
+        };
+      }
+      if (config.requireZip && !config.postalCode) {
+        this.renderer.render(config, linkViewModel(config), this.estimatedLocation !== null);
+        return;
+      }
+      this.renderer.render(config, readyViewModel(response, config, this.estimatedLocation !== null), this.estimatedLocation !== null);
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         return;
@@ -105,11 +189,23 @@ export class DeliveryPromiseWidget implements WidgetInstance {
         return;
       }
 
-      this.renderer.render(this.config, handleFetchError(error, this.config));
+      if (resolvingIp && !this.estimatedLocation) {
+        this.estimatedLocation = error instanceof FetchError ? readLocation(error.location) : null;
+        this.estimatedLocation ??= fallbackLocation;
+        config = { ...config, destinationCountry: this.estimatedLocation.country, postalCode: this.estimatedLocation.zip ?? '' };
+      }
+      this.renderer.render(config, handleFetchError(error, config), this.estimatedLocation !== null);
     }
   }
 
   async update(options: WidgetUpdateOptions): Promise<void> {
+    if (options.postalCode !== undefined || options.destinationCountry !== undefined ||
+        options.ipFetch === false) {
+      this.estimatedLocation = null;
+    }
+    if (options.postalCode !== undefined || options.destinationCountry !== undefined) {
+      this.countrySelected = options.destinationCountry !== undefined;
+    }
     this.input = {
       ...this.input,
       ...options,

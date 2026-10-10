@@ -21,12 +21,21 @@ Size recommendation widget for product detail pages. Renders fit guidance — ca
 
 ### [Promise UI](./packages/promise-ui/)
 
-Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency — powered by the [parcelLab Promise API](https://docs.parcellab.com/docs/developers/promise/api).
+Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency, powered by the [parcelLab Promise API](https://docs.parcellab.com/docs/developers/promise/api). Optional IP Fetch estimates the destination before a shopper enters a postal code.
 
 ```html
-<div data-promise data-account-id="YOUR_ACCOUNT_ID" data-country="DEU"></div>
+<div
+  data-promise
+  data-account-id="YOUR_ACCOUNT_ID"
+  data-country="DEU"
+  data-ip-fetch="true"
+  data-zip-picker="inline"
+  data-country-picker="true"
+></div>
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
+
+IP Fetch is off unless enabled. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. See the [location request examples](./packages/promise-ui/README.md#sample-requests) for PDP and checkout use cases.
 
 [Source](./packages/promise-ui/) · [Docs](./packages/promise-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)
 
@@ -43,6 +52,8 @@ npm test             # Run all tests
 npm run dev:selection-guide   # → localhost:4173
 npm run dev:promise           # → localhost:4174
 ```
+
+Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests; the API response panel shows the actual request and location.
 
 ### Package layout
 

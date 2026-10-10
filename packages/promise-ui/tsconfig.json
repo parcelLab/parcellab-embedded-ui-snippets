@@ -5,7 +5,7 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "resolveJsonModule": true,
-    "lib": ["DOM", "ES2020"],
+    "lib": ["DOM", "ES2020", "ES2021.Intl"],
     "skipLibCheck": true,
     "noEmit": true,
     "declaration": false,
