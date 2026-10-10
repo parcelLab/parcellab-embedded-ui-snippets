@@ -26,6 +26,20 @@ describe('Promise demo data presets', () => {
     new Function(script)();
   }
 
+  it('keeps shopper choices on reload and clears them when data settings change', () => {
+    const stored = JSON.stringify({ postalCode: '10001', destinationCountry: 'USA', expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 });
+    localStorage.setItem('pl-promise-zip', stored);
+    reloadDemo();
+    expect(localStorage.getItem('pl-promise-zip')).toBe(stored);
+    document.querySelector('[data-preset="ip-germany"]').click();
+    expect(localStorage.getItem('pl-promise-zip')).toBeNull();
+
+    localStorage.setItem('pl-promise-zip', stored);
+    document.querySelector('#country').value = 'USA';
+    document.querySelector('#country').dispatchEvent(new Event('input'));
+    expect(localStorage.getItem('pl-promise-zip')).toBeNull();
+  });
+
   it('shares every control and restores the same configuration and embed mode', () => {
     const controls = document.querySelectorAll('input[id], select[id]');
     const settings = {

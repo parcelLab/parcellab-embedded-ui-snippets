@@ -35,7 +35,7 @@ Delivery promise widget for product and checkout pages. Shows estimated delivery
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
 
-IP Fetch is off unless enabled. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. See the [PDP and checkout recommendations](./packages/promise-ui/README.md#recommended-usage) for screenshots and embed examples, and the [location request examples](./packages/promise-ui/README.md#sample-requests) for supported destinations.
+IP Fetch is off unless enabled. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. Shopper changes to ZIP and country are saved in browser local storage for 30 days after the last change and reused when the page supplies no ZIP. See the [PDP and checkout recommendations](./packages/promise-ui/README.md#recommended-usage) for screenshots and embed examples, and the [location request examples](./packages/promise-ui/README.md#sample-requests) for supported destinations.
 
 [Source](./packages/promise-ui/) · [Docs](./packages/promise-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)
 

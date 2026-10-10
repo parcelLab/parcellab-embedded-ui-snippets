@@ -944,6 +944,8 @@ describe('DeliveryPromise Widget', () => {
     });
 
     it('uses a shopper correction with the resolved country and removes the estimate marker', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
       const fetchMock = mockIpFetch();
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
@@ -956,7 +958,7 @@ describe('DeliveryPromise Widget', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
       await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
-      expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '10001', destinationCountry: 'USA' });
+      expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '10001', destinationCountry: 'USA', expiresAt: now + 30 * 24 * 60 * 60 * 1000 });
       const request = new URL(fetchMock.mock.calls[2]![0]);
       expect(request.searchParams.get('destination')).toBe('10001_USA');
       widget.destroy();
@@ -978,6 +980,86 @@ describe('DeliveryPromise Widget', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.get('destination')).toBe('80469_DEU');
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
+      widget.destroy();
+    });
+
+    it.each([
+      { postalCode: '10001', destinationCountry: 'USA' },
+      { postalCode: '', destinationCountry: 'FRA' },
+    ])('reuses $postalCode/$destinationCountry until expiry without extending it', async (destination) => {
+      const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(expiresAt - 1);
+      const stored = JSON.stringify({ ...destination, expiresAt });
+      localStorage.setItem('pl-promise-zip', stored);
+      const fetchMock = mockIpFetch();
+      globalThis.fetch = fetchMock;
+      const { init } = await import('../src/index');
+      const config = { target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' as const, countryPicker: true };
+      const widget = init(config);
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__summary')).not.toBeNull());
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.get('destination')).toBe(
+        destination.postalCode ? `${destination.postalCode}_${destination.destinationCountry}` : destination.destinationCountry,
+      );
+      expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe(destination.destinationCountry);
+      expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
+      expect(localStorage.getItem('pl-promise-zip')).toBe(stored);
+      widget.destroy();
+
+      clock.mockReturnValue(expiresAt);
+      const expired = init(config);
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('10038'));
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('ipify.org'))).toBe(true);
+      expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
+      expect(localStorage.getItem('pl-promise-zip')).toBeNull();
+      expired.destroy();
+    });
+
+    it.each([
+      ['80469', '80469', 'DEU'],
+      [JSON.stringify({ postalCode: '10001', destinationCountry: 'USA' }), '10001', 'USA'],
+      [JSON.stringify({ postalCode: '', destinationCountry: 'FRA' }), '', 'FRA'],
+    ])('gives the older saved destination %s a fixed 30-day expiry on first use', async (stored, postalCode, destinationCountry) => {
+      const now = Date.now();
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+      localStorage.setItem('pl-promise-zip', stored!);
+      globalThis.fetch = mockIpFetch();
+      const { init } = await import('../src/index');
+      const config = { target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' as const };
+      const widget = init(config);
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__summary')).not.toBeNull());
+      const migrated = localStorage.getItem('pl-promise-zip');
+      expect(JSON.parse(migrated!)).toEqual({ postalCode, destinationCountry, expiresAt: now + 30 * 24 * 60 * 60 * 1000 });
+      widget.destroy();
+
+      clock.mockReturnValue(now + 24 * 60 * 60 * 1000);
+      const restored = init(config);
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__summary')).not.toBeNull());
+      expect(localStorage.getItem('pl-promise-zip')).toBe(migrated);
+      restored.destroy();
+    });
+
+    it.each([null, '2099-01-01', 0])('ignores a saved destination with an invalid or expired timestamp %s', async (expiresAt) => {
+      localStorage.setItem('pl-promise-zip', JSON.stringify({ postalCode: '10001', destinationCountry: 'USA', expiresAt }));
+      globalThis.fetch = mockIpFetch();
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' });
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('10038'));
+      expect(localStorage.getItem('pl-promise-zip')).toBeNull();
+      widget.destroy();
+    });
+
+    it('keeps a supplied ZIP and country ahead of a saved shopper destination', async () => {
+      const stored = JSON.stringify({ postalCode: '10001', destinationCountry: 'USA', expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 });
+      localStorage.setItem('pl-promise-zip', stored);
+      const fetchMock = mockIpFetch();
+      globalThis.fetch = fetchMock;
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', postalCode: '80469', ipFetch: true, zipPicker: 'inline' });
+      await vi.waitFor(() => expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('80469'));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.get('destination')).toBe('80469_DEU');
+      expect(localStorage.getItem('pl-promise-zip')).toBe(stored);
       widget.destroy();
     });
 
@@ -1046,6 +1128,8 @@ describe('DeliveryPromise Widget', () => {
     });
 
     it('lets the shopper change the inferred country and keeps that selection on refresh and reload', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
       const fetchMock = mockIpFetch();
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
@@ -1064,7 +1148,7 @@ describe('DeliveryPromise Widget', () => {
       expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('FRA');
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       expect(container.textContent).not.toContain('10038');
-      expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '', destinationCountry: 'FRA' });
+      expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '', destinationCountry: 'FRA', expiresAt: now + 30 * 24 * 60 * 60 * 1000 });
       await widget.refresh();
       expect(fetchMock).toHaveBeenCalledTimes(3);
       widget.destroy();

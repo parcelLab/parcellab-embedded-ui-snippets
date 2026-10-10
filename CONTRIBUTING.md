@@ -34,6 +34,8 @@ Check ZIP + country, country-only, and IP + fallback country requests with the [
 
 Check the returned ZIP and country, manual corrections, and a response without a ZIP. Use the presentation presets to check visible and hidden location controls, including the ZIP-required prompt.
 
+Change the ZIP or country in the preview, then reload to check that the shopper's choice is reused. Manual choices expire 30 days after the last change; visits do not extend expiry, and automatic locations are not saved. Selecting a data preset or changing a data field clears saved choices for a fresh demo request. The widget tests cover expiry, older saved values, and the priority of a ZIP supplied by the page.
+
 Enter a specified IP to test a known IPv4 or IPv6 destination without the public IP lookup. Copy the demo URL and reload it to check that all controls, presets, and panel settings are restored.
 
 ## Adding a new package

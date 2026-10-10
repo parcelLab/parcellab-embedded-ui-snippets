@@ -184,7 +184,11 @@ Set `zipPicker: 'inline'` to show the location row in all three layouts, includi
 
 Set `zipPicker: 'none'` to hide the entire location row, including the ZIP picker, country dropdown, and automatic-location icon. The widget still uses the supplied, resolved, or fallback country internally. With the row hidden, `requireZip` does not block country-level predictions.
 
-A ZIP correction keeps the country shown in the row. A country selection clears the previous ZIP. Both actions remove the automatic-location icon and skip further IP lookups. Shopper selections are saved with their country in local storage, including country selections without a ZIP. ZIP values saved by earlier versions remain supported.
+A ZIP correction keeps the country shown in the row. A country selection clears the previous ZIP. Both actions remove the automatic-location icon and skip further IP lookups.
+
+The widget saves these shopper selections in local storage under `pl-promise-zip` for **30 days after the last manual change**, including a country selection without a ZIP. It reuses them on later visits in the same browser and site when the page supplies no ZIP. A ZIP supplied by the page takes priority. Each manual change starts a new 30-day period; visits and refreshes do not extend it. Expired values are removed when the widget next tries to load them, and the configured destination or IP Fetch applies again. If browser storage is blocked or cleared, the widget still works but cannot reuse saved choices.
+
+ZIP values and ZIP/country pairs saved by earlier versions remain supported. They have no timestamp, so their 30-day period starts on first use with this version. Public IP values and automatic locations are not saved.
 
 When no ZIP is available, the row shows the country followed by a separate **Add ZIP** action, for example, "Deliver to United States · Add ZIP". The action opens an empty ZIP editor. A returned or entered ZIP appears as an editable destination value.
 
@@ -485,6 +489,8 @@ The demo starts with **PDP · IP (Germany fallback)** and **Standard PDP**. The 
 In IP mode, enter an optional **IP address** to test a specific IPv4 or IPv6 address. The preview, API panel, sample request, and generated embed use that address. Leave it empty to use your public IP. Choosing a data preset clears the specified IP.
 
 Every demo control is read from and written to URL query parameters. Copy the address bar URL to share a configuration; opening it restores the data, presentation, preset selection, HTML/JavaScript embed tab, and API panel visibility. Control keys use camelCase, for example `accountId`, `country`, `postalCode`, `locationMode`, `ipAddress`, `layout`, `dateMode`, `zipPicker`, `countryPicker`, and `showCutoff`. The URL stores specified inputs, including a supplied IP or ZIP; it does not add the automatically fetched IP or resolved location.
+
+Manual ZIP and country changes in the preview are reused on reload for up to 30 days, as in an embedded widget. They stay in local storage rather than the shared URL. Selecting a data preset or changing a data field clears these saved choices so you can test the specified request. A supplied ZIP still takes priority over a saved choice.
 
 For example, open `http://localhost:4174/?locationMode=ip&country=DEU&ipAddress=8.8.8.8&layout=text&dateMode=by&showCutoff=never` to estimate a specific IP with a Germany fallback and a delivery-by date. The demo fills in the remaining settings and writes them to the URL. Unknown select values are ignored. Existing unrelated query parameters and the fragment remain unchanged.
 

@@ -768,7 +768,6 @@ copyCodeButton.addEventListener('click', async () => {
   }, 1200);
 });
 
-clearPersistedZip();
 const urlSettings = new URLSearchParams(window.location.search);
 activeData = Object.hasOwn(DATA_PRESETS, urlSettings.get('dataPreset'))
   ? urlSettings.get('dataPreset') : DATA_FIELDS.some((key) => urlSettings.has(key)) ? null : 'ip-germany';

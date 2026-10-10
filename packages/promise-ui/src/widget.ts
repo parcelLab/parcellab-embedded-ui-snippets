@@ -15,6 +15,7 @@ import {
 const registry = new WeakMap<HTMLElement, DeliveryPromiseWidget>();
 
 const ZIP_STORAGE_KEY = 'pl-promise-zip';
+const ZIP_STORAGE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function readLocation(value: unknown): PromiseLocation | null {
   if (!value || typeof value !== 'object') return null;
@@ -37,21 +38,33 @@ function loadingViewModel(config: ResolvedWidgetConfig): ViewModel {
 
 function persistZip(postalCode: string, destinationCountry: string): void {
   try {
-    localStorage.setItem(ZIP_STORAGE_KEY, JSON.stringify({ postalCode, destinationCountry }));
+    localStorage.setItem(ZIP_STORAGE_KEY, JSON.stringify({
+      postalCode,
+      destinationCountry,
+      expiresAt: Date.now() + ZIP_STORAGE_TTL_MS,
+    }));
   } catch {
     // localStorage may be unavailable
   }
 }
 
-function loadPersistedZip(): { postalCode: string; destinationCountry?: string } {
+function loadPersistedZip(destinationCountry: string): { postalCode: string; destinationCountry?: string } {
   try {
     const stored = localStorage.getItem(ZIP_STORAGE_KEY) ?? '';
-    // Keep postal codes saved by earlier versions.
-    if (!stored.startsWith('{')) return { postalCode: stored };
-    const destination = JSON.parse(stored);
+    if (!stored) return { postalCode: '' };
+    const destination = stored.startsWith('{')
+      ? JSON.parse(stored)
+      : { postalCode: stored, destinationCountry: destinationCountry.trim().toUpperCase() };
     if (typeof destination.postalCode === 'string' &&
         typeof destination.destinationCountry === 'string' &&
         /^[A-Z]{3}$/.test(destination.destinationCountry)) {
+      if (destination.expiresAt === undefined) {
+        // Older values have no timestamp; start their expiry on first use.
+        persistZip(destination.postalCode, destination.destinationCountry);
+      } else if (!Number.isFinite(destination.expiresAt) || destination.expiresAt <= Date.now()) {
+        localStorage.removeItem(ZIP_STORAGE_KEY);
+        return { postalCode: '' };
+      }
       return {
         postalCode: destination.postalCode,
         destinationCountry: destination.destinationCountry,
@@ -77,7 +90,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     this.input = { ...input };
 
     if (!this.input.postalCode) {
-      const persisted = loadPersistedZip();
+      const persisted = loadPersistedZip(this.input.destinationCountry);
       if (persisted.postalCode || persisted.destinationCountry) {
         this.input.postalCode = persisted.postalCode;
         this.input.destinationCountry = persisted.destinationCountry ?? this.input.destinationCountry;
