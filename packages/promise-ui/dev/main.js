@@ -1,10 +1,11 @@
 /* Two preset banks. Each only touches its own group of fields, so users can
    mix-and-match (e.g. "US ZIP" data + "Card" presentation). */
 
-const DATA_FIELDS = ['country', 'postalCode', 'locationMode', 'courier', 'serviceLevel', 'warehouse', 'locale', 'fallbackDays'];
+const DATA_FIELDS = ['accountId', 'country', 'postalCode', 'locationMode', 'ipAddress', 'courier', 'serviceLevel', 'warehouse', 'locale', 'fallbackDays'];
 const PRESENTATION_FIELDS = [
   'layout', 'dateMode', 'zipPicker', 'countryPicker', 'showCutoff', 'icon',
   'confidence', 'dateFormat', 'showCarrier', 'requireZip',
+  'selectionReferenceDate', 'selectionPick',
 ];
 
 const DATA_PRESETS = {
@@ -227,6 +228,7 @@ renderPresetButtons(el('presentation-preset-list'), PRESENTATION_PRESETS);
 const presetButtons = document.querySelectorAll('[data-preset]');
 
 let widget;
+let widgetError = '';
 let embedMode = 'html';
 let activeData = null;
 let activePresentation = null;
@@ -261,6 +263,7 @@ function currentConfig() {
     destinationCountry: country,
     postalCode: mode === 'postal' ? el('postal-code').value.trim() : '',
     ipFetch: mode === 'ip',
+    ipAddress: mode === 'ip' ? el('ip-address').value.trim() : '',
     courier: el('courier').value.trim(),
     serviceLevel: el('service-level').value.trim(),
     warehouse: el('warehouse').value.trim(),
@@ -282,9 +285,11 @@ function currentConfig() {
 }
 
 const FIELD_ID_MAP = {
+  accountId: 'account-id',
   country: 'country',
   postalCode: 'postal-code',
   locationMode: 'location-mode',
+  ipAddress: 'ip-address',
   courier: 'courier',
   serviceLevel: 'service-level',
   warehouse: 'warehouse',
@@ -300,6 +305,8 @@ const FIELD_ID_MAP = {
   dateFormat: 'date-format',
   showCarrier: 'show-carrier',
   requireZip: 'require-zip',
+  selectionReferenceDate: 'selection-reference-date',
+  selectionPick: 'selection-pick',
 };
 
 function applyFieldsToInputs(fields) {
@@ -308,8 +315,23 @@ function applyFieldsToInputs(fields) {
     if (!id) continue;
     const node = el(id);
     if (!node) continue;
+    if (node.tagName === 'SELECT' && !Array.from(node.options).some((option) => option.value === String(value))) continue;
     node.value = value ?? '';
   }
+}
+
+function writeUrlSettings() {
+  const url = new URL(window.location.href);
+  for (const [key, id] of Object.entries(FIELD_ID_MAP)) {
+    url.searchParams.set(key, el(id).value);
+  }
+  for (const [key, value] of Object.entries({ dataPreset: activeData, presentationPreset: activePresentation })) {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
+  url.searchParams.set('embedMode', embedMode);
+  url.searchParams.set('apiPanel', String(apiPanelOpen));
+  window.history.replaceState(null, '', url);
 }
 
 function applyDataPreset(key) {
@@ -317,7 +339,7 @@ function applyDataPreset(key) {
   if (!preset) return;
   activeData = key;
   clearPersistedZip();
-  applyFieldsToInputs({ locationMode: preset.cfg.postalCode ? 'postal' : 'country', ...preset.cfg });
+  applyFieldsToInputs({ locationMode: preset.cfg.postalCode ? 'postal' : 'country', ipAddress: '', ...preset.cfg });
   refreshPresetButtons();
   previewNotes.textContent = preset.notes;
   renderWidget();
@@ -347,6 +369,7 @@ function buildInitConfig(c) {
     destinationCountry: c.destinationCountry,
     postalCode: c.postalCode,
     ipFetch: c.ipFetch,
+    ipAddress: c.ipAddress,
     courier: c.courier,
     serviceLevel: c.serviceLevel,
     warehouse: c.warehouse,
@@ -372,6 +395,7 @@ function buildInitConfig(c) {
 function renderWidget() {
   const mode = el('location-mode').value;
   el('postal-code-field').style.display = mode === 'postal' ? '' : 'none';
+  el('ip-address-field').style.display = mode === 'ip' ? '' : 'none';
   el('ip-fetch-hint').style.display = mode === 'ip' ? '' : 'none';
   const config = currentConfig();
 
@@ -379,6 +403,7 @@ function renderWidget() {
     widget.destroy();
   }
   mount.innerHTML = '';
+  widgetError = '';
 
   try {
     widget = window.DeliveryPromise.init({
@@ -386,16 +411,20 @@ function renderWidget() {
       ...buildInitConfig(config),
     });
   } catch (err) {
+    widgetError = err.message;
     console.error('Widget init failed:', err);
     mount.textContent = `Error: ${err.message}`;
   }
 
   updateEmbedCode();
-  const sampleUrl = new URL(buildApiUrl(config, config.ipFetch ? '8.8.8.8' : ''));
+  const sampleUrl = new URL(buildApiUrl(config, config.ipFetch ? config.ipAddress || '8.8.8.8' : ''));
   el('sample-request').textContent = `GET ${sampleUrl.pathname}${sampleUrl.search}`;
   el('sample-request-note').textContent = config.ipFetch
-    ? '8.8.8.8 is an example IP. The preview uses your public IP and the configured country as its fallback.'
+    ? config.ipAddress
+      ? 'The preview uses the specified IP and the configured country as its fallback.'
+      : '8.8.8.8 is an example IP. The preview uses your public IP and the configured country as its fallback.'
     : config.postalCode ? 'Use a known delivery address, for example at checkout.' : 'Use a country-level estimate before a ZIP is known, for example on a product page.';
+  writeUrlSettings();
   scheduleApiPanelUpdate();
 }
 
@@ -445,6 +474,13 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   if (!apiPanelOpen) return;
   const c = currentConfig();
 
+  if (widgetError) {
+    apiRequestUrlEl.textContent = '— invalid configuration —';
+    apiResponseEl.textContent = widgetError;
+    setApiStatus('Skipped', 'error');
+    return;
+  }
+
   if (!c.accountId || !c.destinationCountry) {
     apiMethodEl.textContent = '';
     apiRequestUrlEl.textContent = '— missing required fields —';
@@ -465,8 +501,8 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   apiAbortController?.abort();
   apiAbortController = new AbortController();
   const signal = apiAbortController.signal;
-  let destinationIp = '';
-  if (c.ipFetch && !c.postalCode) {
+  let destinationIp = c.ipAddress;
+  if (c.ipFetch && !c.postalCode && !destinationIp) {
     setApiStatus('Looking up IP…', 'loading');
     try {
       const response = await fetch('https://api64.ipify.org?format=json', {
@@ -544,6 +580,7 @@ function setApiPanelOpen(open) {
   apiPanelToggle.setAttribute('aria-pressed', String(open));
   apiPanelToggle.textContent = open ? 'Hide API response' : 'Show API response';
   mainElement.dataset.showApi = String(open);
+  writeUrlSettings();
   if (open) {
     void updateApiPanel();
   } else {
@@ -601,6 +638,7 @@ function htmlEmbedSnippet(c) {
     `data-country="${escapeAttribute(c.destinationCountry)}"`,
     `data-postal-code="${escapeAttribute(c.postalCode)}"`,
     `data-ip-fetch="${c.ipFetch ? 'true' : 'false'}"`,
+    ...(c.ipAddress ? [`data-ip-address="${escapeAttribute(c.ipAddress)}"`] : []),
     `data-courier="${escapeAttribute(c.courier)}"`,
     `data-service-level="${escapeAttribute(c.serviceLevel)}"`,
     `data-warehouse="${escapeAttribute(c.warehouse)}"`,
@@ -638,6 +676,7 @@ function jsEmbedSnippet(c) {
     `  destinationCountry: ${JSON.stringify(c.destinationCountry)}`,
     `  postalCode: ${JSON.stringify(c.postalCode)}`,
     `  ipFetch: ${c.ipFetch ? 'true' : 'false'}`,
+    ...(c.ipAddress ? [`  ipAddress: ${JSON.stringify(c.ipAddress)}`] : []),
     `  courier: ${JSON.stringify(c.courier)}`,
     `  serviceLevel: ${JSON.stringify(c.serviceLevel)}`,
     `  warehouse: ${JSON.stringify(c.warehouse)}`,
@@ -681,24 +720,15 @@ function updateEmbedModeButtons() {
   });
 }
 
-const controlIds = [
-  'account-id', 'country', 'postal-code', 'location-mode',
-  'courier', 'service-level', 'warehouse',
-  'layout', 'date-mode',
-  'zip-picker', 'country-picker', 'show-cutoff', 'locale',
-  'icon', 'confidence', 'date-format',
-  'fallback-days', 'show-carrier',
-  'require-zip',
-  'selection-reference-date', 'selection-pick',
-];
-for (const id of controlIds) {
+for (const id of Object.values(FIELD_ID_MAP)) {
   const element = el(id);
   if (!element) continue;
   const event = element.tagName === 'SELECT' ? 'change' : 'input';
   element.addEventListener(event, () => {
     // Manual edits clear preset highlighting for the relevant bank
-    if (DATA_FIELDS.some((f) => FIELD_ID_MAP[f] === id) || id === 'account-id') {
+    if (DATA_FIELDS.some((f) => FIELD_ID_MAP[f] === id)) {
       activeData = null;
+      clearPersistedZip();
     }
     if (PRESENTATION_FIELDS.some((f) => FIELD_ID_MAP[f] === id)) {
       activePresentation = null;
@@ -721,6 +751,7 @@ embedModeButtons.forEach((btn) => {
     embedMode = btn.dataset.embedMode === 'js' ? 'js' : 'html';
     updateEmbedModeButtons();
     updateEmbedCode();
+    writeUrlSettings();
   });
 });
 
@@ -737,8 +768,19 @@ copyCodeButton.addEventListener('click', async () => {
   }, 1200);
 });
 
-updateEmbedModeButtons();
 clearPersistedZip();
-activeData = 'ip-germany';
-applyFieldsToInputs(DATA_PRESETS[activeData].cfg);
-applyPresentationPreset('text-zip-editor');
+const urlSettings = new URLSearchParams(window.location.search);
+activeData = Object.hasOwn(DATA_PRESETS, urlSettings.get('dataPreset'))
+  ? urlSettings.get('dataPreset') : DATA_FIELDS.some((key) => urlSettings.has(key)) ? null : 'ip-germany';
+activePresentation = Object.hasOwn(PRESENTATION_PRESETS, urlSettings.get('presentationPreset'))
+  ? urlSettings.get('presentationPreset') : PRESENTATION_FIELDS.some((key) => urlSettings.has(key)) ? null : 'text-zip-editor';
+const data = DATA_PRESETS[activeData ?? 'ip-germany'].cfg;
+applyFieldsToInputs({ locationMode: data.postalCode ? 'postal' : 'country', ipAddress: '', ...data });
+applyFieldsToInputs({ countryPicker: 'false', ...PRESENTATION_PRESETS[activePresentation ?? 'text-zip-editor'].cfg });
+applyFieldsToInputs(Object.fromEntries(urlSettings));
+embedMode = urlSettings.get('embedMode') === 'js' ? 'js' : 'html';
+updateEmbedModeButtons();
+refreshPresetButtons();
+previewNotes.textContent = PRESENTATION_PRESETS[activePresentation]?.notes ?? DATA_PRESETS[activeData]?.notes ?? '';
+renderWidget();
+if (urlSettings.get('apiPanel') === 'true') setApiPanelOpen(true);

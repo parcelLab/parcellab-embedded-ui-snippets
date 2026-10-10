@@ -119,6 +119,8 @@ export interface WidgetConfig {
   postalCode?: string;
   // Fetch the public IP only when no postal code is available.
   ipFetch?: boolean;
+  // Use a specified IPv4/IPv6 address instead of fetching the public IP.
+  ipAddress?: string;
 
   // Filter fields composed into the API call
   courier?: string;
@@ -176,6 +178,7 @@ export interface ResolvedWidgetConfig {
   destinationCountry: string;
   postalCode: string;
   ipFetch: boolean;
+  ipAddress: string;
 
   courier: string;
   serviceLevel: string;

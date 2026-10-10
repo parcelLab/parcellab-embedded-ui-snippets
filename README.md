@@ -53,7 +53,7 @@ npm run dev:selection-guide   # → localhost:4173
 npm run dev:promise           # → localhost:4174
 ```
 
-Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests; the API response panel shows the actual request and location.
+Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests; the API response panel shows the actual request and location. All controls are saved in the URL so you can share a configuration, including an optional specified IP address.
 
 ### Package layout
 

@@ -133,7 +133,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     this.renderer.render(config, loadingViewModel(config), this.estimatedLocation !== null);
 
     try {
-      let destinationIp = resolvingIp ? await fetchPublicIp(signal) : '';
+      let destinationIp = resolvingIp ? config.ipAddress || await fetchPublicIp(signal) : '';
       if (signal.aborted) return;
       if (resolvingIp && !destinationIp) this.estimatedLocation = fallbackLocation;
       if (config.requireZip && !config.postalCode && !destinationIp) {
@@ -200,9 +200,10 @@ export class DeliveryPromiseWidget implements WidgetInstance {
 
   async update(options: WidgetUpdateOptions): Promise<void> {
     if (options.postalCode !== undefined || options.destinationCountry !== undefined ||
-        options.ipFetch === false) {
+        options.ipAddress !== undefined || options.ipFetch === false) {
       this.estimatedLocation = null;
     }
+    if (options.ipAddress !== undefined) this.countrySelected = false;
     if (options.postalCode !== undefined || options.destinationCountry !== undefined) {
       this.countrySelected = options.destinationCountry !== undefined;
     }

@@ -1,4 +1,5 @@
 import { getMessages } from './messages';
+import { isIpAddress } from './api';
 import type {
   CarrierDisplay,
   Confidence,
@@ -190,12 +191,18 @@ export function resolveConfig(
     throw new Error('destinationCountry is required.');
   }
 
+  const ipAddress = config.ipAddress?.trim() ?? '';
+  if (config.ipFetch === true && ipAddress && !isIpAddress(ipAddress)) {
+    throw new Error(`Invalid ipAddress: ${ipAddress}`);
+  }
+
   return {
     target: resolveTarget(config.target),
     accountId: parseAccountId(config.accountId),
     destinationCountry: config.destinationCountry.trim().toUpperCase(),
     postalCode: config.postalCode?.trim() ?? '',
     ipFetch: config.ipFetch === true,
+    ipAddress,
     courier: config.courier?.trim() ?? '',
     serviceLevel: config.serviceLevel?.trim() ?? '',
     warehouse: config.warehouse?.trim() ?? '',
@@ -375,6 +382,7 @@ export function readConfigFromElement(
 
   if (dataset.requireZip === 'true') config.requireZip = true;
   if (dataset.ipFetch === 'true') config.ipFetch = true;
+  if (dataset.ipAddress) config.ipAddress = dataset.ipAddress;
   if (dataset.countryPicker === 'true') config.countryPicker = true;
 
   if (

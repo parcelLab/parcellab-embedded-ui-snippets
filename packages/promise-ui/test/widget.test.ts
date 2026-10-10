@@ -663,6 +663,62 @@ describe('DeliveryPromise Widget', () => {
   });
 
   describe('IP Fetch', () => {
+    it.each(['8.8.8.8', '2001:4860:4860::8888'])('uses a specified IP %s without fetching the public IP', async (ipAddress) => {
+      globalThis.fetch = mockFetchResponse({ ...successResponse(), location: { country: 'USA', region: 'US-NY', zip: '10038' } });
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, ipAddress, zipPicker: 'inline' });
+      await vi.waitFor(() => expect(container.textContent).toContain('10038'));
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const query = new URL(vi.mocked(globalThis.fetch).mock.calls[0]![0] as string).searchParams;
+      expect(query.get('destination')).toBe(ipAddress);
+      expect(query.get('fallbackCountry')).toBe('DEU');
+      widget.destroy();
+    });
+
+    it.each(['disabled', 'zip'])('ignores a specified IP when %s takes priority', async (mode) => {
+      globalThis.fetch = mockFetchResponse(successResponse());
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: mode !== 'disabled', ipAddress: '8.8.8.8', postalCode: mode === 'zip' ? '81549' : '' });
+      await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const query = new URL(vi.mocked(globalThis.fetch).mock.calls[0]![0] as string).searchParams;
+      expect(query.get('destination')).toBe(mode === 'zip' ? '81549_DEU' : 'DEU');
+      expect(query.has('fallbackCountry')).toBe(false);
+      widget.destroy();
+    });
+
+    it.each(['999.8.8.8', '01.2.3.4', '2001:::8888', 'example.com'])('rejects an invalid specified IP %s before making a request', async (ipAddress) => {
+      globalThis.fetch = vi.fn();
+      const { init } = await import('../src/index');
+      expect(() => init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, ipAddress })).toThrow('Invalid ipAddress');
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])('resolves a changed IP after a manual country selection=%s', async (manualCountry) => {
+      const fetchMock = mockFetchResponse({ ...successResponse(), location: { country: 'USA', region: 'US-NY', zip: '10038' } });
+      globalThis.fetch = fetchMock;
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, ipAddress: '8.8.8.8', zipPicker: 'inline' });
+      await vi.waitFor(() => expect(container.textContent).toContain('10038'));
+      if (manualCountry) await widget.update({ destinationCountry: 'DEU', postalCode: '' });
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...successResponse(), location: { country: 'DEU', region: 'DE-BY', zip: '81371' } }) });
+      await widget.update({ ipAddress: '1.1.1.1' });
+      expect(container.textContent).toContain('81371');
+      expect(new URL(fetchMock.mock.lastCall![0]).searchParams.get('destination')).toBe('1.1.1.1');
+      widget.destroy();
+    });
+
+    it('reads a specified IP from HTML attributes', async () => {
+      globalThis.fetch = mockFetchResponse({ ...successResponse(), location: { country: 'USA', region: 'US-NY', zip: '10038' } });
+      Object.assign(container.dataset, { promise: '', accountId: '18', country: 'DEU', ipFetch: 'true', ipAddress: '8.8.8.8', zipPicker: 'inline' });
+      const { autoInit } = await import('../src/index');
+      const [widget] = autoInit(document.body);
+      await vi.waitFor(() => expect(container.textContent).toContain('10038'));
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(new URL(vi.mocked(globalThis.fetch).mock.calls[0]![0] as string).searchParams.get('destination')).toBe('8.8.8.8');
+      widget!.destroy();
+    });
+
     const location = { country: 'USA', region: 'US-NY', zip: '10038' };
 
     function mockIpFetch(resolvedLocation: unknown = location) {

@@ -6,6 +6,21 @@ import {
 
 const responseCache = new Map<string, PromiseApiResponse>();
 
+export function isIpAddress(ip: string): boolean {
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+    return ip.split('.').every((part) => /^(0|[1-9]\d{0,2})$/.test(part) && Number(part) <= 255);
+  }
+  if (/^[\da-f:.]+$/i.test(ip) && ip.includes(':')) {
+    try {
+      new URL(`http://[${ip}]/`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 function cacheKey(config: ResolvedWidgetConfig, destinationIp: string): string {
   return [
     config.apiBaseUrl,
@@ -39,15 +54,7 @@ export async function fetchPublicIp(signal: AbortSignal): Promise<string> {
     });
     if (!response.ok) return '';
     const { ip } = await response.json();
-    if (typeof ip !== 'string') return '';
-    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
-      return ip.split('.').every((part) => Number(part) <= 255) ? ip : '';
-    }
-    if (/^[\da-f:.]+$/i.test(ip) && ip.includes(':')) {
-      new URL(`http://[${ip}]/`);
-      return ip;
-    }
-    return '';
+    return typeof ip === 'string' && isIpAddress(ip) ? ip : '';
   } catch {
     return '';
   } finally {

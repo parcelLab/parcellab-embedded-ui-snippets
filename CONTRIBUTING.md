@@ -34,6 +34,8 @@ Check ZIP + country, country-only, and IP + fallback country requests with the [
 
 Check the returned ZIP and country, manual corrections, and a response without a ZIP. Use the presentation presets to check visible and hidden location controls, including the ZIP-required prompt.
 
+Enter a specified IP to test a known IPv4 or IPv6 destination without the public IP lookup. Copy the demo URL and reload it to check that all controls, presets, and panel settings are restored.
+
 ## Adding a new package
 
 1. Create `packages/<name>/` following the structure of existing packages

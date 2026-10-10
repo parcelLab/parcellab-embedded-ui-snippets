@@ -208,6 +208,8 @@ The widget requests the shopper's public IP from `https://api64.ipify.org?format
 
 The address version depends on the shopper's network. Both IPv4 and IPv6 are supported by the widget and Backend. In the request URL, IPv6 colons appear as `%3A` because the query value is URL-encoded.
 
+To use a specific address, set `ipAddress: '8.8.8.8'` in JavaScript or `data-ip-address="8.8.8.8"` in HTML, together with IP Fetch. This accepts an IPv4 or IPv6 literal and skips the ipify request. Leave it empty to fetch the shopper's public IP. A ZIP or manual country selection still takes priority. Invalid addresses are rejected before a request is sent. `update({ ipAddress: '1.1.1.1' })` clears the previous automatic location and resolves the new address.
+
 The Promise response supplies `location.country`, `location.region`, and `location.zip`. The widget displays and reuses the returned ZIP and country, even when no prediction is available. The current-location icon marks this automatic selection. Its tooltip and localized accessible label say "Approximate location based on your IP data or default country" because the response does not distinguish IP resolution from country fallback. ZIP values of `null` and `"0"` leave the ZIP picker empty. The country control selects the returned country. If the control is off, automatic selections show the country name next to the ZIP control.
 
 The public IP request has a three-second timeout. If it fails, the widget uses `destinationCountry` with an empty ZIP. If the Backend cannot resolve the IP and returns no location, the widget retries with that same country. With the location row visible and `requireZip: true`, IP Fetch runs first; an empty resolved ZIP then requires shopper input. Public IP values and automatic locations remain in memory and are not saved in local storage.
@@ -218,7 +220,7 @@ The widget uses `GET /v2/prediction` directly. [Backend PR #52546](https://githu
 
 IP resolution requires `IPAPI_TOKEN` in the Backend runtime, as described in the [Backend geolocation setup](https://github.com/parcelLab/Backend/blob/main/docs/endpoints/prediction-ip-geolocation.md). If the provider is unavailable or the resolved destination is unusable, the Backend can return the configured fallback country with `zip: null`. IP data can also lack a postal code. Check the Backend configuration and geolocation logs when IP requests do not return the expected location.
 
-When enabled, the browser contacts ipify and sends the public IP to parcelLab. Backend uses ip-api Pro to resolve the location. Allow `https://api64.ipify.org` and the configured Promise API origin in your site's CSP `connect-src` directive.
+When enabled without a specified IP, the browser contacts ipify and sends the public IP to parcelLab. Backend uses ip-api Pro to resolve the location. Allow `https://api64.ipify.org` and the configured Promise API origin in your site's CSP `connect-src` directive.
 
 ### IP country fallback
 
@@ -295,6 +297,7 @@ Backend destination contract: [IP geolocation for delivery predictions](https://
 | `destinationCountry` | `string` | — | **Required.** ISO 3166-1 alpha-3 country code for manual requests and the IP fallback. |
 | `postalCode` | `string` | — | Destination postal code for more precise estimates. Takes priority over IP Fetch. |
 | `ipFetch` | `boolean` | `false` | Fetch the public IP and use the resolved destination when no postal code is available. |
+| `ipAddress` | `string` | — | Optional IPv4 or IPv6 address to use instead of the public IP lookup. Requires `ipFetch: true`; a ZIP or manual country selection takes priority. |
 | `courier` | `string` | — | Filter results to a specific courier. |
 | `serviceLevel` | `string` | — | Filter results to a specific service level. |
 | `warehouse` | `string` | — | Specify the shipping origin warehouse. |
@@ -325,7 +328,7 @@ Backend destination contract: [IP geolocation for delivery predictions](https://
 
 | Mode | Description | Best for |
 |------|-------------|----------|
-| `text` | Delivery sentence with an optional destination and cutoff line | Product pages |
+| `text` | Inline delivery sentence with an optional destination and cutoff line | Product pages |
 | `card` | Prominent date with destination and delivery details | Product pages with space |
 | `badge` | Compact date chip with the optional location row | Checkout summaries |
 
@@ -478,6 +481,14 @@ npm run dev:promise
 Open the HTTP demo at `http://localhost:4174/`. Opening `dev/index.html` with `file://` does not load the widget correctly. Select one location request type: ZIP + country, country only, or IP Fetch + fallback country. Presentation controls set the location row visibility, country picker, layout, locale, and other display options. The demo generates copyable HTML and JavaScript embeds.
 
 The demo starts with **PDP · IP (Germany fallback)** and **Standard PDP**. The **PDP · IP (US fallback)** data preset uses the same lookup with a US fallback. Both send the configured country as `fallbackCountry` in the request URL. The single country field stays visible for all request types.
+
+In IP mode, enter an optional **IP address** to test a specific IPv4 or IPv6 address. The preview, API panel, sample request, and generated embed use that address. Leave it empty to use your public IP. Choosing a data preset clears the specified IP.
+
+Every demo control is read from and written to URL query parameters. Copy the address bar URL to share a configuration; opening it restores the data, presentation, preset selection, HTML/JavaScript embed tab, and API panel visibility. Control keys use camelCase, for example `accountId`, `country`, `postalCode`, `locationMode`, `ipAddress`, `layout`, `dateMode`, `zipPicker`, `countryPicker`, and `showCutoff`. The URL stores specified inputs, including a supplied IP or ZIP; it does not add the automatically fetched IP or resolved location.
+
+For example, open `http://localhost:4174/?locationMode=ip&country=DEU&ipAddress=8.8.8.8&layout=text&dateMode=by&showCutoff=never` to estimate a specific IP with a Germany fallback and a delivery-by date. The demo fills in the remaining settings and writes them to the URL. Unknown select values are ignored. Existing unrelated query parameters and the fragment remain unchanged.
+
+The **Inline (PDP, cart)** layout uses `layout: 'text'`. Generated embed script URLs are relative to the demo's origin and directory. A local demo therefore shows `http://localhost:4174/dist/promise.iife.js`; a hosted demo uses its own hosted bundle. Use the CDN URL from [Recommended usage](#recommended-usage) for a production embed.
 
 Data preset labels identify PDP and checkout use cases. Hover over a preset for a short explanation. The **Sample request** below the data presets shows the current query, including any filters. Its IP address is an example; use **Show API response** to inspect the actual request and returned location.
 

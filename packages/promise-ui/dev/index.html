@@ -140,7 +140,11 @@
               Postal code
               <input id="postal-code" value="" placeholder="For example, 81549" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-            <p id="ip-fetch-hint" class="text-[0.78rem] text-navy-400 leading-snug">The country above is also the IP fallback. It applies when IP resolution fails or no delivery method matches.</p>
+            <label class="field-row" id="ip-address-field">
+              IP address (optional)
+              <input id="ip-address" value="" placeholder="Auto-detect public IP" spellcheck="false" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
+            </label>
+            <p id="ip-fetch-hint" class="text-[0.78rem] text-navy-400 leading-snug">Leave the IP empty to use your public IP, or enter an IPv4 or IPv6 address. The country above is the fallback if resolution fails or no delivery method matches.</p>
           </fieldset>
 
           <fieldset class="space-y-2">
@@ -194,7 +198,7 @@
           <label class="field-row">
             Layout
             <select id="layout" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
-              <option value="text" selected>Text · single line (PDP, cart)</option>
+              <option value="text" selected>Inline (PDP, cart)</option>
               <option value="card">Card · prominent (PDP hero)</option>
               <option value="badge">Badge · compact pill</option>
             </select>
