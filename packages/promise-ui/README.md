@@ -24,6 +24,80 @@ It ships as a zero-dependency bundle in two formats:
 | IIFE | `dist/promise.iife.js` | `<script>` tag embeds — auto-initializes from `data-*` attributes |
 | ESM | `dist/promise.esm.js` | Module bundlers and `import` consumers |
 
+## Recommended usage
+
+Use these examples as starting points for product detail pages (PDPs) and checkout. Replace account `1612197` with your account ID. Set `data-country` to the ISO3 code for your main customer market, such as `DEU` for Germany. It supplies the fallback when IP resolution fails or no delivery method matches the resolved location.
+
+If you already have a delivery address, for example from a logged-in shopper, set `data-postal-code` to its ZIP and `data-country` to its country. A known ZIP takes priority over IP Fetch. Leave the ZIP empty to use IP resolution and country fallback.
+
+The screenshots show example predictions. Dates, cutoff times, carriers, and locations depend on the response for the shopper's destination.
+
+### PDP: minimal estimate with cutoff
+
+Use IP Fetch to estimate the destination before an address is known. Keep the ZIP and country controls hidden to make the widget small. The estimate still uses the known, resolved, or fallback destination. Show the earliest estimated delivery date and the order cutoff to create urgency, without a carrier name.
+
+![PDP delivery estimate with a calendar icon and order cutoff, with the location controls hidden.](./docs/images/pdp-minimal.png)
+
+```html
+<div
+  data-promise
+  data-account-id="1612197"
+  data-country="DEU"
+  data-postal-code=""
+  data-ip-fetch="true"
+  data-layout="text"
+  data-date-mode="from"
+  data-zip-picker="none"
+  data-country-picker="false"
+  data-show-cutoff="always"
+  data-locale="en"
+  data-icon="calendar"
+  data-confidence="estimated"
+  data-date-format="long"
+  data-show-carrier="none"
+  data-require-zip="false"
+  data-selection-reference-date="earliest"
+  data-selection-pick="earliest"
+></div>
+<script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
+```
+
+### Checkout: editable location with delivery-by date
+
+Show the ZIP and country returned by IP resolution and let the shopper change them. The icon marks an approximate location. If no ZIP is available, the widget shows the country and **Add ZIP**. When the checkout already has an address, supply that ZIP and country instead.
+
+Show the selected delivery method's latest estimated arrival date with "delivery by" wording and the carrier name. Hide the cutoff because the shopper is already in checkout.
+
+![Checkout delivery-by estimate with the carrier and editable ZIP and country, marked as an approximate location.](./docs/images/checkout-location.png)
+
+```html
+<div
+  data-promise
+  data-account-id="1612197"
+  data-country="DEU"
+  data-postal-code=""
+  data-ip-fetch="true"
+  data-layout="text"
+  data-date-mode="by"
+  data-zip-picker="inline"
+  data-country-picker="true"
+  data-show-cutoff="never"
+  data-locale="en"
+  data-icon="none"
+  data-confidence="estimated"
+  data-date-format="short"
+  data-show-carrier="inline"
+  data-require-zip="false"
+  data-selection-reference-date="earliest"
+  data-selection-pick="earliest"
+></div>
+<script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
+```
+
+Both examples select the delivery method with the earliest `earliest` date. `data-date-mode="from"` displays that method's earliest date; `data-date-mode="by"` displays its latest date. See [Selecting the Primary Prediction](#selecting-the-primary-prediction) to change which method is selected.
+
+For local testing, replace the script URL with `http://localhost:4174/dist/promise.iife.js` and run the [development server](#development).
+
 ## Quick Start
 
 ### HTML Embed (simplest)
