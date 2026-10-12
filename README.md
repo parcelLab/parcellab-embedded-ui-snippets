@@ -21,7 +21,7 @@ Size recommendation widget for product detail pages. Renders fit guidance — ca
 
 ### [Promise UI](./packages/promise-ui/)
 
-Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency, powered by the [parcelLab Promise API](https://docs.parcellab.com/docs/developers/promise/api). Optional IP Fetch estimates the destination before a shopper enters a postal code.
+Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency, powered by the [parcelLab Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates). Optional IP Fetch estimates the destination before a shopper enters a postal code.
 
 ```html
 <div
@@ -92,7 +92,7 @@ Bundles are distributed via S3 + CloudFront. GitHub Actions handle everything:
 
 These widgets are open-source reference implementations. If you need a custom integration:
 
-1. **Use the APIs directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API](https://docs.parcellab.com/docs/developers/promise/api) from your own frontend and render the response however you like
+1. **Use the APIs directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates) from your own frontend and render the response however you like
 2. **Fork and customize** — start from this codebase and modify the rendering, styling, and behavior to match your design system
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your needs
 

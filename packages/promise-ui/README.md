@@ -1,6 +1,6 @@
 # Promise UI
 
-Open-source reference implementation of an embeddable delivery promise widget for retailer product detail pages, cart summaries, and checkout flows. Displays estimated delivery dates, courier options, and order cutoff urgency — powered by the [parcelLab Promise API](https://docs.parcellab.com/docs/developers/promise/api).
+Open-source reference implementation of an embeddable delivery promise widget for retailer product detail pages, cart summaries, and checkout flows. Displays estimated delivery dates, courier options, and order cutoff urgency — powered by the [parcelLab Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates).
 
 Use this widget as-is, or as a starting point for building your own custom integration against the API.
 
@@ -207,6 +207,8 @@ When no ZIP is available, the row shows the country followed by a separate **Add
 
 Click the ZIP or **Add ZIP** to open the editor. Press **Enter** or click **Apply** to submit; press **Escape** to cancel. Input is trimmed, and empty input is not submitted. The widget does not validate country-specific postal code formats. Change the country to clear the previous ZIP, or clear it through the JavaScript API.
 
+Formatting is retained in the displayed and saved ZIP. The formatted value is URL-encoded in the request. The [Backend location resolver](https://github.com/parcelLab/Backend/blob/main/prediction/shop.ts) removes spaces and hyphens before validation, so `SW1A 1AA_GBR` and `K1A 0B1_CAN` resolve as `SW1A1AA_GBR` and `K1A0B1_CAN`.
+
 `zipPicker: 'link'` is the legacy mode. With `requireZip: true` and no ZIP, **Get delivery date** opens a browser prompt. An existing ZIP is displayed as text rather than an inline editor. For an editable location throughout the flow, use `inline`.
 
 Only changes through the widget's ZIP or country controls are saved. Host calls to `update()` change the current widget but do not write browser storage. The storage key is shared by widgets on the same origin; it is not separated by account ID.
@@ -300,6 +302,8 @@ GET {apiBaseUrl}/v2/prediction?user={accountId}&destination={destination}&lang={
 ```
 
 Default base URL: `https://api.parcellab.com`
+
+The [Backend v2 implementation](https://github.com/parcelLab/Backend/blob/main/endpoints/prediction.js) supports `calibration` and `tag`, although the public v2 page does not list them. It passes `calibration` to prediction generation and `tag` to the adjustment-rule configuration. The Product API v4 wrapper [calls this same v2 Backend endpoint](https://github.com/parcelLab/product-api/blob/main/promise/services/backend_prediction_service.py). These options remain supported when the widget calls v2 directly.
 
 Backend destination contract: [IP geolocation for delivery predictions](https://github.com/parcelLab/Backend/blob/main/docs/endpoints/prediction-ip-geolocation.md)
 
@@ -687,7 +691,7 @@ Use the local or PR-preview bundle to test unreleased changes. The production CD
 
 This widget is an open-source reference implementation. If you need a custom integration:
 
-1. **Use the API directly** — call the [Promise API](https://docs.parcellab.com/docs/developers/promise/api) from your own frontend code and render the response however you like.
+1. **Use the API directly** — call the [Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates) from your own frontend code and render the response however you like.
 2. **Fork this repo** — start from this codebase and customize the rendering, styling, and behavior to match your exact requirements.
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your design system.
 
@@ -695,7 +699,7 @@ The source code in `src/` is organized into clear modules (API client, config re
 
 ## Related
 
-- [Promise API Reference](https://docs.parcellab.com/docs/developers/promise/api) — product documentation
+- [Promise API v2 Reference](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates) — product documentation for the endpoint used by this widget
 - [Legacy Promise Plugin](https://github.com/parcelLab/parcellab-promise-plugin) — previous Svelte-based implementation (v2 API)
 - [Selection Guide UI](../selection-guide-ui/) — companion widget for size recommendations
 
