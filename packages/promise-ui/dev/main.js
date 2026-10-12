@@ -505,7 +505,9 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   if (c.ipFetch && !c.postalCode && !destinationIp) {
     setApiStatus('Looking up IP…', 'loading');
     try {
-      const response = await fetch('https://api64.ipify.org?format=json', {
+      const response = await fetch(new URL('/v2/ip', API_BASE_URL).toString(), {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
         credentials: 'omit',
         referrerPolicy: 'no-referrer',
         signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),

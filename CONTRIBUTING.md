@@ -30,7 +30,7 @@ npm run build:site --workspace=packages/promise-ui
 
 Open `http://localhost:4174/` for the demo. Use the HTTP server instead of opening `dev/index.html` with `file://`.
 
-Check ZIP + country, country-only, and IP + fallback country requests with the [data presets and sample requests](./packages/promise-ui/README.md#sample-requests). `destinationCountry` is the only country setting and supplies the fallback for every IP request. IP Fetch supports IPv4 and IPv6 and is off unless enabled. The demo fetches your public IP; the IP in its sample request is an example.
+Check ZIP + country, country-only, and IP + fallback country requests with the [data presets and sample requests](./packages/promise-ui/README.md#sample-requests). `destinationCountry` is the only country setting and supplies the fallback for every IP request. IP Fetch supports IPv4 and IPv6 and is off unless enabled. The widget and demo fetch your public IP from parcelLab's `/v2/ip` route; the IP in the sample request is an example. The Backend route must be deployed for automatic lookup. No external IP discovery service is used.
 
 Check the returned ZIP and country, manual corrections, and a response without a ZIP. Use the presentation presets to check visible and hidden location controls, including the ZIP-required prompt.
 

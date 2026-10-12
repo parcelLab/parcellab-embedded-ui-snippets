@@ -725,11 +725,28 @@ describe('DeliveryPromise Widget', () => {
       return vi.fn().mockImplementation(async (url: string) => ({
         ok: true,
         status: 200,
-        json: async () => url.includes('ipify.org')
+        json: async () => new URL(url).pathname === '/v2/ip'
           ? { ip: '2001:4860:4860::8888' }
           : { ...successResponse(), location: resolvedLocation },
       }));
     }
+
+    it('uses the configured parcelLab API for both IP lookup and prediction', async () => {
+      const fetchMock = mockIpFetch();
+      globalThis.fetch = fetchMock;
+      const { init } = await import('../src/index');
+      const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, apiBaseUrl: 'https://api.staging.parcellab.com', zipPicker: 'inline' });
+      await vi.waitFor(() => expect(container.textContent).toContain('10038'));
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[0]![0]).toBe('https://api.staging.parcellab.com/v2/ip');
+      expect(fetchMock.mock.calls[0]![1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
+      const prediction = new URL(fetchMock.mock.calls[1]![0]);
+      expect(prediction.origin).toBe('https://api.staging.parcellab.com');
+      expect(prediction.searchParams.get('destination')).toBe('2001:4860:4860::8888');
+      expect(prediction.searchParams.get('fallbackCountry')).toBe('DEU');
+      widget.destroy();
+    });
 
     it.each(['ready', 'required', 'empty', 'error'])('keeps the country and empty ZIP action separate in the %s state', async (state) => {
       const resolvedLocation = { country: 'USA', region: 'US', zip: null };
@@ -916,7 +933,7 @@ describe('DeliveryPromise Widget', () => {
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ...(ipFetch === undefined ? {} : { ipFetch }) });
       await widget.refresh();
-      expect(fetchMock.mock.calls.every(([url]) => !url.includes('ipify.org') && !url.includes('destination_ip'))).toBe(true);
+      expect(fetchMock.mock.calls.every(([url]) => new URL(url).pathname === '/v2/prediction')).toBe(true);
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       widget.destroy();
     });
@@ -1009,7 +1026,7 @@ describe('DeliveryPromise Widget', () => {
       clock.mockReturnValue(expiresAt);
       const expired = init(config);
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('10038'));
-      expect(fetchMock.mock.calls.some(([url]) => url.includes('ipify.org'))).toBe(true);
+      expect(fetchMock.mock.calls.some(([url]) => new URL(url).pathname === '/v2/ip')).toBe(true);
       expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
       expect(localStorage.getItem('pl-promise-zip')).toBeNull();
       expired.destroy();
@@ -1332,7 +1349,7 @@ describe('DeliveryPromise Widget', () => {
     it.each(['8.8.8.8', '2001:4860:4860::8888', '::ffff:192.0.2.1', '', '999.8.8.8', '2001:::8888', 'example.com', 123])('validates the advertised IP %s', async (ip) => {
       globalThis.fetch = mockFetchResponse({ ip });
       const { fetchPublicIp } = await import('../src/api');
-      const result = await fetchPublicIp(new AbortController().signal);
+      const result = await fetchPublicIp('https://api.parcellab.com', new AbortController().signal);
       expect(result).toBe(typeof ip === 'string' && ['8.8.8.8', '2001:4860:4860::8888', '::ffff:192.0.2.1'].includes(ip) ? ip : '');
     });
 
@@ -1344,7 +1361,7 @@ describe('DeliveryPromise Widget', () => {
         requestSignal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
       }));
       const { fetchPublicIp } = await import('../src/api');
-      const lookup = fetchPublicIp(new AbortController().signal);
+      const lookup = fetchPublicIp('https://api.parcellab.com', new AbortController().signal);
       await vi.advanceTimersByTimeAsync(3000);
       expect(await lookup).toBe('');
       expect(requestSignal.aborted).toBe(true);

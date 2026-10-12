@@ -38,7 +38,7 @@ function cacheKey(config: ResolvedWidgetConfig, destinationIp: string): string {
   ].join('|');
 }
 
-export async function fetchPublicIp(signal: AbortSignal): Promise<string> {
+export async function fetchPublicIp(apiBaseUrl: string, signal: AbortSignal): Promise<string> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal.addEventListener('abort', abort, { once: true });
@@ -46,8 +46,9 @@ export async function fetchPublicIp(signal: AbortSignal): Promise<string> {
 
   try {
     if (signal.aborted) return '';
-    const response = await fetch('https://api64.ipify.org?format=json', {
+    const response = await fetch(new URL('/v2/ip', apiBaseUrl).toString(), {
       headers: { Accept: 'application/json' },
+      cache: 'no-store',
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
       signal: controller.signal,

@@ -146,7 +146,7 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     this.renderer.render(config, loadingViewModel(config), this.estimatedLocation !== null);
 
     try {
-      let destinationIp = resolvingIp ? config.ipAddress || await fetchPublicIp(signal) : '';
+      let destinationIp = resolvingIp ? config.ipAddress || await fetchPublicIp(config.apiBaseUrl, signal) : '';
       if (signal.aborted) return;
       if (resolvingIp && !destinationIp) this.estimatedLocation = fallbackLocation;
       if (config.requireZip && !config.postalCode && !destinationIp) {

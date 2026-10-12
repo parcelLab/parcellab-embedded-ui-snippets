@@ -233,15 +233,17 @@ IP Fetch remains explicit in the SDK. Set `ipFetch: true` in JavaScript or `data
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
 
-The widget requests the shopper's public IP from `https://api64.ipify.org?format=json`, which supports IPv4 and IPv6. See the [ipify API documentation](https://www.ipify.org/). It sends this value as `destination`, with the configured `destinationCountry` as the ISO3 `fallbackCountry` query parameter. A configured, entered, or saved ZIP takes priority and skips the IP lookup.
+The widget requests the shopper's connection IP from `GET /v2/ip` on the configured `apiBaseUrl` (by default, `https://api.parcellab.com/v2/ip`). The parcelLab API returns `{ "ip": "..." }` with an IPv4 or IPv6 address. The browser has no direct API for its public IP, so parcelLab reads the address from the incoming request. No external IP discovery service is called. The widget sends this value as `destination`, with the configured `destinationCountry` as the ISO3 `fallbackCountry` query parameter. A configured, entered, or saved ZIP takes priority and skips the IP lookup.
+
+Deploy the [Backend public-IP route in PR #52571](https://github.com/parcelLab/Backend/pull/52571) before releasing this widget. A custom API proxy must provide both `/v2/ip` and `/v2/prediction`. If the IP route is unavailable, the widget uses the existing country fallback or ZIP prompt.
 
 The address version depends on the shopper's network. Both IPv4 and IPv6 are supported by the widget and Backend. In the request URL, IPv6 colons appear as `%3A` because the query value is URL-encoded.
 
-To use a specific address, set `ipAddress: '8.8.8.8'` in JavaScript or `data-ip-address="8.8.8.8"` in HTML, together with IP Fetch. This accepts an IPv4 or IPv6 literal and skips the ipify request. Leave it empty to fetch the shopper's public IP. A ZIP or manual country selection still takes priority. Invalid addresses are rejected before a request is sent. `update({ ipAddress: '1.1.1.1' })` clears the previous automatic location and manual-country flag; it resolves the new address when IP Fetch is enabled and no configured or entered ZIP takes priority.
+To use a specific address, set `ipAddress: '8.8.8.8'` in JavaScript or `data-ip-address="8.8.8.8"` in HTML, together with IP Fetch. This accepts an IPv4 or IPv6 literal and skips the `/v2/ip` request. Leave it empty to fetch the shopper's public IP. A ZIP or manual country selection still takes priority. Invalid addresses are rejected before a request is sent. `update({ ipAddress: '1.1.1.1' })` clears the previous automatic location and manual-country flag; it resolves the new address when IP Fetch is enabled and no configured or entered ZIP takes priority.
 
 The Promise response supplies `location.country`, `location.region`, and `location.zip`. The widget displays and reuses the returned ZIP and country, even when no prediction is available. The current-location icon marks this automatic selection. Its tooltip and localized accessible label say "Approximate location based on your IP data or default country" because the response does not distinguish IP resolution from country fallback. ZIP values of `null` and `"0"` leave the ZIP picker empty. The country control selects the returned country. If the control is off, automatic selections show the country name next to the ZIP control.
 
-The public IP request has a three-second timeout and omits credentials and the referrer. If it fails, the widget uses `destinationCountry` with an empty ZIP. If an IP prediction request returns HTTP 404 without a usable location, the widget retries with that same country. A 404 that includes a usable location keeps that location and shows the no-data or static-fallback state. Other API errors use the error or static-fallback state.
+The public IP request has a three-second timeout, disables caching, and omits credentials and the referrer. The Backend also returns `Cache-Control: no-store, no-cache` so shared caches cannot return another shopper's address. If the lookup fails, the widget uses `destinationCountry` with an empty ZIP. If an IP prediction request returns HTTP 404 without a usable location, the widget retries with that same country. A 404 that includes a usable location keeps that location and shows the no-data or static-fallback state. Other API errors use the error or static-fallback state.
 
 With the location row visible and `requireZip: true`, IP Fetch runs first; an empty resolved ZIP then requires shopper input. If no ZIP and no usable IP are available, the widget skips the prediction call and shows the ZIP prompt. Public IP values and automatic locations remain in memory and are not saved in local storage.
 
@@ -251,7 +253,7 @@ The widget uses `GET /v2/prediction` directly. [Backend PR #52546](https://githu
 
 IP resolution requires `IPAPI_TOKEN` in the Backend runtime, as described in the [Backend geolocation setup](https://github.com/parcelLab/Backend/blob/main/docs/endpoints/prediction-ip-geolocation.md). If the provider is unavailable or the resolved destination is unusable, the Backend can return the configured fallback country with `zip: null`. IP data can also lack a postal code. Check the Backend configuration and geolocation logs when IP requests do not return the expected location.
 
-When enabled without a specified IP, the browser contacts ipify and sends the public IP to parcelLab. Backend uses ip-api Pro to resolve the location. Allow `https://api64.ipify.org` and the configured Promise API origin in your site's CSP `connect-src` directive.
+When enabled without a specified IP, the browser contacts only the configured parcelLab API for IP discovery and prediction. Backend uses ip-api Pro to resolve the location on the server. Allow the configured Promise API origin in your site's CSP `connect-src` directive. A VPN or shared network can return its public exit address, so the location remains approximate.
 
 ### IP country fallback
 
@@ -357,7 +359,7 @@ The current layouts display calendar dates. The API's `min`, `max`, and `likely`
 | `calibration` | `'conservative' \| 'balanced' \| 'aggressive'` | — | Prediction confidence model. |
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
-| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Override the API base URL. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Base URL for prediction and public IP lookup. A custom proxy must provide `/v2/prediction` and `/v2/ip` when automatic IP Fetch is enabled. |
 | `layout` | `'text' \| 'card' \| 'badge'` | `'text'` | Layout mode (see below). |
 | `dateMode` | `'from' \| 'on' \| 'by' \| 'range'` | `'from'` | Which delivery date or range to display. |
 | `showCutoff` | `'auto' \| 'always' \| 'never' \| 'express-only'` | `'auto'` | Control the order cutoff line. |

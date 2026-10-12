@@ -101,6 +101,24 @@ describe('Promise demo data presets', () => {
     expect(document.querySelector('#sample-request-note').textContent).toContain('preview uses your public IP');
   });
 
+  it.each([true, false])('uses parcelLab for IP lookup and retains country fallback when lookup succeeds=%s', async (ok) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok, json: async () => ({ ip: '2001:4860:4860::8888' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', text: async () => '{"success":true}' });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/?locationMode=ip&apiPanel=true');
+    reloadDemo();
+    await vi.waitFor(() => expect(document.querySelector('#api-response').textContent).toContain('success'));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.parcellab.com/v2/ip');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const prediction = new URL(fetchMock.mock.calls[1][0]);
+    expect(prediction.origin).toBe('https://api.parcellab.com');
+    expect(prediction.searchParams.get('destination')).toBe(ok ? '2001:4860:4860::8888' : 'DEU');
+    expect(prediction.searchParams.get('fallbackCountry')).toBe(ok ? 'DEU' : null);
+  });
+
   it('uses a supplied IP in the API panel without looking up the public IP', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, statusText: 'OK', text: async () => '{"success":true}' });
     vi.stubGlobal('fetch', fetchMock);
