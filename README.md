@@ -35,7 +35,7 @@ Delivery promise widget for product and checkout pages. Shows estimated delivery
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
 
-IP Fetch is off unless enabled. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. Shopper changes to ZIP and country are saved in browser local storage for 30 days after the last change and reused when the page supplies no ZIP. See the [PDP and checkout recommendations](./packages/promise-ui/README.md#recommended-usage) for screenshots and embed examples, and the [location request examples](./packages/promise-ui/README.md#sample-requests) for supported destinations.
+IP Fetch is off unless enabled. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. Shopper changes to ZIP and country are saved in browser local storage for 30 days after the last change and reused when the page supplies no ZIP. The widget displays one selected delivery method. It does not create or send a visitor ID. See the [PDP and checkout recommendations](./packages/promise-ui/README.md#recommended-usage) and the full [UI behavior and configuration](./packages/promise-ui/README.md#configuration).
 
 [Source](./packages/promise-ui/) · [Docs](./packages/promise-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)
 
@@ -53,7 +53,7 @@ npm run dev:selection-guide   # → localhost:4173
 npm run dev:promise           # → localhost:4174
 ```
 
-Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests; the API response panel shows the actual request and location. All controls are saved in the URL so you can share a configuration, including an optional specified IP address.
+Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests. The API response panel makes a separate request from the controls; saved or manually corrected preview locations can differ. All controls are saved in the URL so you can share a configuration, including an optional specified IP address. See the [demo behavior](./packages/promise-ui/README.md#development) and [request cache limits](./packages/promise-ui/README.md#request-caching).
 
 ### Package layout
 

@@ -38,6 +38,10 @@ Change the ZIP or country in the preview, then reload to check that the shopper'
 
 Enter a specified IP to test a known IPv4 or IPv6 destination without the public IP lookup. Copy the demo URL and reload it to check that all controls, presets, and panel settings are restored.
 
+Preview corrections are stored locally; they do not change the Data controls, shared URL, or generated embed. The API panel makes its own request from those controls. Enter a corrected ZIP and country in Data when comparing the panel with the preview.
+
+Before changing behavior, check the [date and confidence rules](./packages/promise-ui/README.md#date-and-confidence-wording), [loading and error states](./packages/promise-ui/README.md#loading-missing-data-and-errors), and [request cache](./packages/promise-ui/README.md#request-caching). `refresh()` can reuse a cached response; the widget has no automatic polling or live cutoff timer. Keep these docs aligned with configuration, model, renderer, widget, and demo changes.
+
 ## Adding a new package
 
 1. Create `packages/<name>/` following the structure of existing packages
