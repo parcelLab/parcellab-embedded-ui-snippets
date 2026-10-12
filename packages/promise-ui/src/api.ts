@@ -38,39 +38,14 @@ function cacheKey(config: ResolvedWidgetConfig, destinationIp: string): string {
   ].join('|');
 }
 
-export async function fetchPublicIp(apiBaseUrl: string, signal: AbortSignal): Promise<string> {
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  signal.addEventListener('abort', abort, { once: true });
-  const timeout = setTimeout(abort, 3000);
-
-  try {
-    if (signal.aborted) return '';
-    const response = await fetch(new URL('/v2/ip', apiBaseUrl).toString(), {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-      credentials: 'omit',
-      referrerPolicy: 'no-referrer',
-      signal: controller.signal,
-    });
-    if (!response.ok) return '';
-    const { ip } = await response.json();
-    return typeof ip === 'string' && isIpAddress(ip) ? ip : '';
-  } catch {
-    return '';
-  } finally {
-    clearTimeout(timeout);
-    signal.removeEventListener('abort', abort);
-  }
-}
-
 export async function fetchPrediction(
   config: ResolvedWidgetConfig,
   signal: AbortSignal,
   destinationIp = '',
 ): Promise<PromiseApiResponse> {
   const key = cacheKey(config, destinationIp);
-  const cached = responseCache.get(key);
+  const selfRequest = !config.postalCode && config.ipFetch && destinationIp === 'self';
+  const cached = selfRequest ? undefined : responseCache.get(key);
 
   if (cached) {
     return cached;
@@ -126,6 +101,7 @@ export async function fetchPrediction(
         Accept: 'application/json',
       },
       signal,
+      ...(selfRequest ? { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' } as const : {}),
     });
   } catch (error) {
     if ((error as Error).name === 'AbortError') {
@@ -156,6 +132,6 @@ export async function fetchPrediction(
     throw new FetchError('network', payload.error ?? 'Prediction failed.', payload.location ?? null);
   }
 
-  responseCache.set(key, payload);
+  if (!selfRequest) responseCache.set(key, payload);
   return payload;
 }

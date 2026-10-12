@@ -117,9 +117,9 @@ export interface WidgetConfig {
   // Destination country, also used as the fallback for IP resolution.
   destinationCountry: string;
   postalCode?: string;
-  // Fetch the public IP from the configured parcelLab API when no postal code is available.
+  // Resolve the caller IP with destination=self when no postal code is available.
   ipFetch?: boolean;
-  // Use a specified IPv4/IPv6 address instead of fetching the public IP.
+  // Use a specified IPv4/IPv6 address instead of the caller IP.
   ipAddress?: string;
 
   // Filter fields composed into the API call

@@ -98,25 +98,25 @@ describe('Promise demo data presets', () => {
     document.querySelector('[data-preset="ip-germany"]').click();
     expect(document.querySelector('#ip-address').value).toBe('');
     expect(new URL(window.location.href).searchParams.get('dataPreset')).toBe('ip-germany');
-    expect(document.querySelector('#sample-request-note').textContent).toContain('preview uses your public IP');
+    expect(document.querySelector('#sample-request-note').textContent).toContain('destination=self');
   });
 
-  it.each([true, false])('uses parcelLab for IP lookup and retains country fallback when lookup succeeds=%s', async (ok) => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok, json: async () => ({ ip: '2001:4860:4860::8888' }) })
-      .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', text: async () => '{"success":true}' });
+  it('uses one self prediction request in the API panel', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, statusText: 'OK', text: async () => '{"success":true}' });
     vi.stubGlobal('fetch', fetchMock);
     window.history.replaceState(null, '', '/?locationMode=ip&apiPanel=true');
     reloadDemo();
     await vi.waitFor(() => expect(document.querySelector('#api-response').textContent).toContain('success'));
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[0][0]).toBe('https://api.parcellab.com/v2/ip');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
-    const prediction = new URL(fetchMock.mock.calls[1][0]);
-    expect(prediction.origin).toBe('https://api.parcellab.com');
-    expect(prediction.searchParams.get('destination')).toBe(ok ? '2001:4860:4860::8888' : 'DEU');
-    expect(prediction.searchParams.get('fallbackCountry')).toBe(ok ? 'DEU' : null);
+    const prediction = new URL(fetchMock.mock.calls[0][0]);
+    expect(prediction.pathname).toBe('/v2/prediction');
+    expect(prediction.searchParams.get('destination')).toBe('self');
+    expect(prediction.searchParams.get('fallbackCountry')).toBe('DEU');
+    expect(document.querySelector('#sample-request').textContent).toContain('destination=self');
+    document.querySelector('#toggle-api-panel').click();
+    document.querySelector('#toggle-api-panel').click();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 
   it('uses a supplied IP in the API panel without looking up the public IP', async () => {
@@ -157,8 +157,8 @@ describe('Promise demo data presets', () => {
     ['usa-no-zip', 'PDP', 'USA', null],
     ['pdp-range', 'Checkout', '81371_DEU', null],
     ['pdp-inline-zip', 'Checkout', '10038_USA', null],
-    ['ip-germany', 'PDP', '8.8.8.8', 'DEU'],
-    ['ip-usa', 'PDP', '8.8.8.8', 'USA'],
+    ['ip-germany', 'PDP', 'self', 'DEU'],
+    ['ip-usa', 'PDP', 'self', 'USA'],
   ])('shows the request and use case for %s', (preset, useCase, destination, fallback) => {
     const button = document.querySelector(`[data-preset="${preset}"]`);
     expect(button.textContent).toContain(useCase);
@@ -182,7 +182,7 @@ describe('Promise demo data presets', () => {
     country.dispatchEvent(new Event('input'));
     const sample = document.querySelector('#sample-request').textContent;
     expect(sample).toContain('fallbackCountry=USA');
-    expect(document.querySelector('#sample-request-note').textContent).toContain('preview uses your public IP');
+    expect(document.querySelector('#sample-request-note').textContent).toContain('destination=self');
     expect(document.querySelector('#embed-code').textContent).toContain('data-country="USA"');
     expect(document.querySelector('#embed-code').textContent).not.toContain('data-fallback-country');
     document.querySelector('[data-embed-mode="js"]').click();

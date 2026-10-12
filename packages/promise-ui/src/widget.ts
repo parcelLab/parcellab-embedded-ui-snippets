@@ -1,4 +1,4 @@
-import { fetchPrediction, fetchPublicIp } from './api';
+import { fetchPrediction } from './api';
 import { readConfigFromElement, resolveConfig } from './config';
 import { handleFetchError, linkViewModel, readyViewModel } from './model';
 import { WidgetRenderer } from './render';
@@ -146,9 +146,8 @@ export class DeliveryPromiseWidget implements WidgetInstance {
     this.renderer.render(config, loadingViewModel(config), this.estimatedLocation !== null);
 
     try {
-      let destinationIp = resolvingIp ? config.ipAddress || await fetchPublicIp(config.apiBaseUrl, signal) : '';
+      const destinationIp = resolvingIp ? config.ipAddress || 'self' : '';
       if (signal.aborted) return;
-      if (resolvingIp && !destinationIp) this.estimatedLocation = fallbackLocation;
       if (config.requireZip && !config.postalCode && !destinationIp) {
         this.renderer.render(config, linkViewModel(config), this.estimatedLocation !== null);
         return;
@@ -170,7 +169,6 @@ export class DeliveryPromiseWidget implements WidgetInstance {
             this.renderer.render(config, linkViewModel(config), true);
             return;
           }
-          destinationIp = '';
           response = await fetchPrediction(config, signal);
         }
       }

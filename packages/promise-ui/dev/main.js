@@ -417,28 +417,28 @@ function renderWidget() {
   }
 
   updateEmbedCode();
-  const sampleUrl = new URL(buildApiUrl(config, config.ipFetch ? config.ipAddress || '8.8.8.8' : ''));
+  const sampleUrl = new URL(buildApiUrl(config));
   el('sample-request').textContent = `GET ${sampleUrl.pathname}${sampleUrl.search}`;
   el('sample-request-note').textContent = config.ipFetch
     ? config.ipAddress
       ? 'The preview uses the specified IP and the configured country as its fallback.'
-      : '8.8.8.8 is an example IP. The preview uses your public IP and the configured country as its fallback.'
+      : 'The preview uses destination=self to resolve your connection IP, with the configured country as its fallback.'
     : config.postalCode ? 'Use a known delivery address, for example at checkout.' : 'Use a country-level estimate before a ZIP is known, for example on a product page.';
   writeUrlSettings();
   scheduleApiPanelUpdate();
 }
 
-function buildApiUrl(c, destinationIp = '') {
+function buildApiUrl(c) {
   const url = new URL('/v2/prediction', API_BASE_URL);
   const country = (c.destinationCountry || '').toUpperCase();
   const destination = c.postalCode
     ? `${c.postalCode}_${country}`
-    : c.ipFetch && destinationIp
-      ? destinationIp
+    : c.ipFetch
+      ? c.ipAddress || 'self'
       : country;
   url.searchParams.set('user', String(c.accountId));
   url.searchParams.set('destination', destination);
-  if (!c.postalCode && c.ipFetch && destinationIp) {
+  if (!c.postalCode && c.ipFetch) {
     url.searchParams.set('fallbackCountry', country);
   }
   if (c.courier) url.searchParams.set('courier', c.courier);
@@ -501,35 +501,12 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   apiAbortController?.abort();
   apiAbortController = new AbortController();
   const signal = apiAbortController.signal;
-  let destinationIp = c.ipAddress;
-  if (c.ipFetch && !c.postalCode && !destinationIp) {
-    setApiStatus('Looking up IP…', 'loading');
-    try {
-      const response = await fetch(new URL('/v2/ip', API_BASE_URL).toString(), {
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-        credentials: 'omit',
-        referrerPolicy: 'no-referrer',
-        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-      });
-      if (response.ok) destinationIp = (await response.json()).ip ?? '';
-    } catch {
-      // Use the fallback country if the IP lookup fails.
-    }
-    if (signal.aborted) return;
-    if (c.requireZip && !destinationIp) {
-      apiRequestUrlEl.textContent = '— call skipped —';
-      apiResponseEl.textContent = 'No postal code or public IP is available.';
-      setApiStatus('Skipped', 'info');
-      return;
-    }
-  }
-
-  const url = buildApiUrl(c, destinationIp);
+  const url = buildApiUrl(c);
+  const selfRequest = !c.postalCode && c.ipFetch && !c.ipAddress;
   apiMethodEl.textContent = 'GET';
   apiRequestUrlEl.textContent = url;
 
-  if (!bypassCache) {
+  if (!bypassCache && !selfRequest) {
     const cached = apiResponseCache.get(url);
     if (cached) {
       apiResponseEl.textContent = cached.body;
@@ -550,6 +527,7 @@ async function updateApiPanel({ bypassCache = false } = {}) {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal,
+      ...(selfRequest ? { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' } : {}),
     });
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -569,7 +547,7 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   }
 
   apiResponseEl.textContent = body || '(empty body)';
-  apiResponseCache.set(url, {
+  if (!selfRequest) apiResponseCache.set(url, {
     status: response.status,
     statusText: response.statusText,
     body: apiResponseEl.textContent,

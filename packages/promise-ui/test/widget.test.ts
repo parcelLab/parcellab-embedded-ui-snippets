@@ -663,7 +663,7 @@ describe('DeliveryPromise Widget', () => {
   });
 
   describe('IP Fetch', () => {
-    it.each(['8.8.8.8', '2001:4860:4860::8888'])('uses a specified IP %s without fetching the public IP', async (ipAddress) => {
+    it.each(['8.8.8.8', '2001:4860:4860::8888'])('uses a specified IP %s as an explicit destination', async (ipAddress) => {
       globalThis.fetch = mockFetchResponse({ ...successResponse(), location: { country: 'USA', region: 'US-NY', zip: '10038' } });
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, ipAddress, zipPicker: 'inline' });
@@ -725,33 +725,29 @@ describe('DeliveryPromise Widget', () => {
       return vi.fn().mockImplementation(async (url: string) => ({
         ok: true,
         status: 200,
-        json: async () => new URL(url).pathname === '/v2/ip'
-          ? { ip: '2001:4860:4860::8888' }
-          : { ...successResponse(), location: resolvedLocation },
+        json: async () => ({ ...successResponse(), location: resolvedLocation }),
       }));
     }
 
-    it('uses the configured parcelLab API for both IP lookup and prediction', async () => {
+    it('resolves the caller with one prediction request on the configured API', async () => {
       const fetchMock = mockIpFetch();
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, apiBaseUrl: 'https://api.staging.parcellab.com', zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.textContent).toContain('10038'));
-
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock.mock.calls[0]![0]).toBe('https://api.staging.parcellab.com/v2/ip');
-      expect(fetchMock.mock.calls[0]![1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
-      const prediction = new URL(fetchMock.mock.calls[1]![0]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const prediction = new URL(fetchMock.mock.calls[0]![0]);
       expect(prediction.origin).toBe('https://api.staging.parcellab.com');
-      expect(prediction.searchParams.get('destination')).toBe('2001:4860:4860::8888');
+      expect(prediction.pathname).toBe('/v2/prediction');
+      expect(prediction.searchParams.get('destination')).toBe('self');
       expect(prediction.searchParams.get('fallbackCountry')).toBe('DEU');
+      expect(fetchMock.mock.calls[0]![1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
       widget.destroy();
     });
 
     it.each(['ready', 'required', 'empty', 'error'])('keeps the country and empty ZIP action separate in the %s state', async (state) => {
       const resolvedLocation = { country: 'USA', region: 'US', zip: null };
       const fetchMock = mockIpFetch(resolvedLocation);
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
         ...successResponse(state === 'empty' ? [] : undefined),
         ...(state === 'error' ? { success: false, error: 'Prediction failed', prediction: [] } : {}),
@@ -799,17 +795,16 @@ describe('DeliveryPromise Widget', () => {
       expect(container.querySelector('.pl-promise__zip-inline')).toBeNull();
       expect(container.querySelector('.pl-promise__country-select')).toBeNull();
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
-      const request = new URL(fetchMock.mock.calls[mode === 'ip' ? 1 : 0]![0]);
-      expect(request.searchParams.get('destination')).toBe(mode === 'postal' ? '81549_DEU' : mode === 'ip' ? '2001:4860:4860::8888' : 'DEU');
+      const request = new URL(fetchMock.mock.calls[0]![0]);
+      expect(request.searchParams.get('destination')).toBe(mode === 'postal' ? '81549_DEU' : mode === 'ip' ? 'self' : 'DEU');
       expect(request.searchParams.get('fallbackCountry')).toBe(mode === 'ip' ? 'DEU' : null);
       await widget.refresh();
-      if (mode === 'ip') expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('10038_USA');
+      if (mode === 'ip') expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('10038_USA');
       widget.destroy();
     });
 
     it('keeps the response location when prediction generation fails', async () => {
       const fetchMock = mockIpFetch();
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: false, error: 'Prediction failed', location, prediction: [] }) });
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
@@ -850,7 +845,6 @@ describe('DeliveryPromise Widget', () => {
     it.each([false, true])('shows the Backend-selected country with empty predictions=%s', async (empty) => {
       const fetchMock = mockIpFetch({ country: 'USA', region: 'US', zip: null });
       if (empty) {
-        fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
         fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...successResponse([]), location: { country: 'USA', region: 'US', zip: null } }) });
       }
       globalThis.fetch = fetchMock;
@@ -859,9 +853,9 @@ describe('DeliveryPromise Widget', () => {
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull());
       await vi.waitFor(() => expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('USA'));
       expect(container.querySelector('.pl-promise__location-estimated')?.getAttribute('aria-label')).toBe('Approximate location based on your IP data or default country');
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       await widget.refresh();
-      const request = new URL(fetchMock.mock.calls[2]![0]);
+      const request = new URL(fetchMock.mock.calls[1]![0]);
       expect(request.searchParams.get('destination')).toBe('USA');
       expect(request.searchParams.has('fallbackCountry')).toBe(false);
       widget.destroy();
@@ -873,7 +867,7 @@ describe('DeliveryPromise Widget', () => {
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'FRA', ipFetch: true, zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.textContent).toContain('10038 United States'));
-      expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('fallbackCountry')).toBe('FRA');
+      expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.get('fallbackCountry')).toBe('FRA');
       widget.destroy();
     });
 
@@ -884,10 +878,10 @@ describe('DeliveryPromise Widget', () => {
       const widget = init({ target: container, accountId: 18, destinationCountry: 'USA', ipFetch: true, zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull());
       await widget.update({ destinationCountry: 'FRA' });
-      const request = new URL(fetchMock.mock.calls[2]![0]);
+      const request = new URL(fetchMock.mock.calls[1]![0]);
       expect(request.searchParams.get('destination')).toBe('FRA');
       expect(request.searchParams.has('fallbackCountry')).toBe(false);
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       widget.destroy();
     });
@@ -907,7 +901,6 @@ describe('DeliveryPromise Widget', () => {
 
     it('uses the fallback country with an empty ZIP when IP resolution fails', async () => {
       const fetchMock = mockIpFetch();
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ location: null }) });
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...successResponse(), location: { country: 'USA', region: 'US', zip: null } }) });
       globalThis.fetch = fetchMock;
@@ -915,15 +908,15 @@ describe('DeliveryPromise Widget', () => {
       const widget = init({ target: container, accountId: 18, destinationCountry: 'USA', ipFetch: true, zipPicker: 'inline', countryPicker: true });
       await vi.waitFor(() => expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('USA'));
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__summary')).not.toBeNull());
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-      expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('USA');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('USA');
       (container.querySelector('.pl-promise__zip-inline') as HTMLButtonElement).click();
       const input = container.querySelector<HTMLInputElement>('.pl-promise__zip-input')!;
       expect(input.value).toBe('');
       input.value = '10001';
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
       await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
-      expect(new URL(fetchMock.mock.calls[3]![0]).searchParams.get('destination')).toBe('10001_USA');
+      expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('10001_USA');
       widget.destroy();
     });
 
@@ -948,13 +941,13 @@ describe('DeliveryPromise Widget', () => {
       expect(marker.getAttribute('aria-label')).toBe('Approximate location based on your IP data or default country');
       expect(marker.getAttribute('title')).toBe('Approximate location based on your IP data or default country');
       expect(marker.querySelector('svg')).not.toBeNull();
-      const ipRequest = new URL(fetchMock.mock.calls[1]![0]);
+      const ipRequest = new URL(fetchMock.mock.calls[0]![0]);
       expect(ipRequest.pathname).toBe('/v2/prediction');
-      expect(ipRequest.searchParams.toString()).toBe(new URLSearchParams({ user: '18', destination: '2001:4860:4860::8888', fallbackCountry: 'DEU', lang: 'en' }).toString());
+      expect(ipRequest.searchParams.toString()).toBe(new URLSearchParams({ user: '18', destination: 'self', fallbackCountry: 'DEU', lang: 'en' }).toString());
       expect(localStorage.getItem('pl-promise-zip')).toBeNull();
 
       await widget.refresh();
-      const explicitRequest = new URL(fetchMock.mock.calls[2]![0]);
+      const explicitRequest = new URL(fetchMock.mock.calls[1]![0]);
       expect(explicitRequest.searchParams.get('destination')).toBe('10038_USA');
       expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
       widget.destroy();
@@ -976,13 +969,13 @@ describe('DeliveryPromise Widget', () => {
       await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '10001', destinationCountry: 'USA', expiresAt: now + 30 * 24 * 60 * 60 * 1000 });
-      const request = new URL(fetchMock.mock.calls[2]![0]);
+      const request = new URL(fetchMock.mock.calls[1]![0]);
       expect(request.searchParams.get('destination')).toBe('10001_USA');
       widget.destroy();
 
       const restored = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.textContent).toContain('10001'));
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       restored.destroy();
     });
@@ -1026,7 +1019,7 @@ describe('DeliveryPromise Widget', () => {
       clock.mockReturnValue(expiresAt);
       const expired = init(config);
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('10038'));
-      expect(fetchMock.mock.calls.some(([url]) => new URL(url).pathname === '/v2/ip')).toBe(true);
+      expect(fetchMock.mock.calls.some(([url]) => new URL(url).searchParams.get('destination') === 'self')).toBe(true);
       expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
       expect(localStorage.getItem('pl-promise-zip')).toBeNull();
       expired.destroy();
@@ -1111,20 +1104,18 @@ describe('DeliveryPromise Widget', () => {
 
     it('shows the resolved location even when no delivery prediction is available', async () => {
       const fetchMock = mockIpFetch();
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ success: false, location, error: 'Nothing found.' }) });
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.textContent).toContain('10038 United States'));
       expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       widget.destroy();
     });
 
     it.each([undefined, 3])('keeps the resolved location with empty predictions and fallbackDays=%s', async (fallbackDays) => {
       const fetchMock = mockIpFetch();
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...successResponse([]), location }) });
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
@@ -1162,17 +1153,17 @@ describe('DeliveryPromise Widget', () => {
       await vi.waitFor(() => expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('FRA'));
       expect(container.querySelector('.pl-promise__country-inline > span')?.textContent).toBe('France');
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__summary')).not.toBeNull());
-      expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('FRA');
+      expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('FRA');
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
       expect(container.textContent).not.toContain('10038');
       expect(JSON.parse(localStorage.getItem('pl-promise-zip')!)).toEqual({ postalCode: '', destinationCountry: 'FRA', expiresAt: now + 30 * 24 * 60 * 60 * 1000 });
       await widget.refresh();
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       widget.destroy();
 
       const restored = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline', countryPicker: true });
       await vi.waitFor(() => expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('FRA'));
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
       restored.destroy();
     });
 
@@ -1212,16 +1203,15 @@ describe('DeliveryPromise Widget', () => {
       widget.destroy();
     });
 
-    it.each([false, true])('uses the fallback country after a public IP lookup failure with requireZip=%s', async (requireZip) => {
+    it.each([false, true])('uses the Backend country fallback with requireZip=%s', async (requireZip) => {
       const fetchMock = mockIpFetch({ country: 'USA', region: '', zip: null });
-      fetchMock.mockRejectedValueOnce(new Error('IP lookup failed'));
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'USA', ipFetch: true, zipPicker: 'inline', countryPicker: true, requireZip });
       await vi.waitFor(() => expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull());
       expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('USA');
-      expect(fetchMock).toHaveBeenCalledTimes(requireZip ? 1 : 2);
-      if (!requireZip) expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('USA');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(new URL(fetchMock.mock.calls[0]![0]).searchParams.get('destination')).toBe('self');
       (container.querySelector('.pl-promise__zip-inline') as HTMLButtonElement).click();
       const input = container.querySelector<HTMLInputElement>('.pl-promise__zip-input')!;
       expect(input.value).toBe('');
@@ -1232,7 +1222,7 @@ describe('DeliveryPromise Widget', () => {
       widget.destroy();
     });
 
-    it('ties ZIP edits during IP lookup to the country shown in the picker', async () => {
+    it('ties ZIP edits during IP prediction to the country shown in the picker', async () => {
       let finishIp!: (value: unknown) => void;
       let ipSignal!: AbortSignal;
       const fetchMock = mockIpFetch();
@@ -1248,7 +1238,7 @@ describe('DeliveryPromise Widget', () => {
       await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
       expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('10001_USA');
       expect(ipSignal.aborted).toBe(true);
-      finishIp({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
+      finishIp({ ok: true, status: 200, json: async () => ({ ...successResponse(), location }) });
       await widget.refresh();
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(container.querySelector('.pl-promise__zip-inline')?.textContent).toBe('10001');
@@ -1258,20 +1248,19 @@ describe('DeliveryPromise Widget', () => {
 
     it('retries the configured country if Promise cannot resolve the IP', async () => {
       const fetchMock = mockIpFetch();
-      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
       fetchMock.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ location: null }) });
       fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ...successResponse(), location: { country: 'DEU', region: 'DE', zip: null } }) });
       globalThis.fetch = fetchMock;
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' });
       await vi.waitFor(() => expect(container.textContent).toContain('Estimated delivery'));
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-      expect(new URL(fetchMock.mock.calls[2]![0]).searchParams.get('destination')).toBe('DEU');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(new URL(fetchMock.mock.calls[1]![0]).searchParams.get('destination')).toBe('DEU');
       expect(container.querySelector('.pl-promise__location-estimated')).not.toBeNull();
       widget.destroy();
     });
 
-    it('does not apply an old IP lookup after a destination update', async () => {
+    it('does not apply an old IP prediction after a destination update', async () => {
       let finishIp!: (value: unknown) => void;
       const fetchMock = mockIpFetch();
       fetchMock.mockImplementationOnce(() => new Promise((resolve) => { finishIp = resolve; }));
@@ -1279,7 +1268,7 @@ describe('DeliveryPromise Widget', () => {
       const { init } = await import('../src/index');
       const widget = init({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true, zipPicker: 'inline' });
       await widget.update({ destinationCountry: 'FRA', postalCode: '75001' });
-      finishIp({ ok: true, json: async () => ({ ip: '8.8.8.8' }) });
+      finishIp({ ok: true, status: 200, json: async () => ({ ...successResponse(), location }) });
       await vi.waitFor(() => expect(container.textContent).toContain('75001'));
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(container.querySelector('.pl-promise__location-estimated')).toBeNull();
@@ -1298,7 +1287,7 @@ describe('DeliveryPromise Widget', () => {
       const [widget] = autoInit(document.body);
       await vi.waitFor(() => expect(container.querySelector<HTMLSelectElement>('.pl-promise__country-select')?.value).toBe('USA'));
       expect(container.textContent).toContain('10038');
-      expect(new URL(vi.mocked(globalThis.fetch).mock.calls[1]![0] as string).searchParams.get('fallbackCountry')).toBe('FRA');
+      expect(new URL(vi.mocked(globalThis.fetch).mock.calls[0]![0] as string).searchParams.get('fallbackCountry')).toBe('FRA');
       widget!.destroy();
     });
 
@@ -1346,25 +1335,19 @@ describe('DeliveryPromise Widget', () => {
       });
     });
 
-    it.each(['8.8.8.8', '2001:4860:4860::8888', '::ffff:192.0.2.1', '', '999.8.8.8', '2001:::8888', 'example.com', 123])('validates the advertised IP %s', async (ip) => {
-      globalThis.fetch = mockFetchResponse({ ip });
-      const { fetchPublicIp } = await import('../src/api');
-      const result = await fetchPublicIp('https://api.parcellab.com', new AbortController().signal);
-      expect(result).toBe(typeof ip === 'string' && ['8.8.8.8', '2001:4860:4860::8888', '::ffff:192.0.2.1'].includes(ip) ? ip : '');
-    });
-
-    it('aborts an IP lookup after three seconds', async () => {
-      vi.useFakeTimers();
-      let requestSignal!: AbortSignal;
-      globalThis.fetch = vi.fn().mockImplementation((_url, options) => new Promise((_resolve, reject) => {
-        requestSignal = options.signal;
-        requestSignal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-      }));
-      const { fetchPublicIp } = await import('../src/api');
-      const lookup = fetchPublicIp('https://api.parcellab.com', new AbortController().signal);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(await lookup).toBe('');
-      expect(requestSignal.aborted).toBe(true);
+    it('does not cache caller-dependent self predictions', async () => {
+      const fetchMock = mockIpFetch();
+      globalThis.fetch = fetchMock;
+      const { resolveConfig } = await import('../src/config');
+      const { fetchPrediction } = await import('../src/api');
+      const config = resolveConfig({ target: container, accountId: 18, destinationCountry: 'DEU', ipFetch: true });
+      const signal = new AbortController().signal;
+      await fetchPrediction(config, signal, 'self');
+      await fetchPrediction(config, signal);
+      await fetchPrediction(config, signal, 'self');
+      await fetchPrediction(config, signal);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get('destination'))).toEqual(['self', 'DEU', 'self']);
     });
   });
 

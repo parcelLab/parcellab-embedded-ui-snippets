@@ -160,7 +160,7 @@ The widget sends one of these three location requests. The picker behavior below
 |----------------|---------------|-----------------|
 | ZIP + country | `destination=81549_DEU` | Show the supplied ZIP in the ZIP picker. |
 | Country only | `destination=DEU` | Show an empty ZIP picker. |
-| IP + fallback country | `destination=8.8.8.8&fallbackCountry=DEU` | Use the ZIP and country from the response. If IP lookup or resolution fails, use the fallback country and an empty ZIP. |
+| IP + fallback country | `destination=self&fallbackCountry=DEU` or an explicit IPv4/IPv6 address | Use the ZIP and country from the response. If IP lookup or resolution fails, use the fallback country and an empty ZIP. |
 
 `destinationCountry` is the only country setting. It supplies the country for ZIP and country-only requests, and the `fallbackCountry` query parameter for IP requests.
 
@@ -168,14 +168,14 @@ On initialization, the destination has this priority:
 
 1. A ZIP supplied by the page, with the page's country.
 2. An unexpired shopper selection from browser storage, with its saved country. A saved country without a ZIP also skips IP Fetch.
-3. IP resolution, if `ipFetch: true`. Use `ipAddress` when supplied; otherwise fetch the public IP.
-4. The configured country with an empty ZIP, if IP Fetch is off or the public IP lookup fails.
+3. IP resolution, if `ipFetch: true`. Use `ipAddress` when supplied; otherwise send `destination=self` to resolve the connection IP on Backend.
+4. The configured country with an empty ZIP, if IP Fetch is off or Backend uses the country fallback.
 
 Picker visibility does not change this priority. Saved selections are loaded on initialization, not on every `update()` or `refresh()`.
 
 ### Sample requests
 
-These examples use account `1612197`. The IP addresses are examples; the demo fetches your public IP. Each data preset shows a sample request and updates the preview. Data and presentation presets can be combined.
+These examples use account `1612197`. The demo sends `destination=self` for automatic IP resolution. Specified IP addresses are examples. Each data preset shows a sample request and updates the preview. Data and presentation presets can be combined.
 
 | Use case | Sample request |
 |----------|----------------|
@@ -183,8 +183,8 @@ These examples use account `1612197`. The IP addresses are examples; the demo fe
 | PDP · United States, no ZIP | `GET /v2/prediction?user=1612197&destination=USA&lang=en` |
 | Checkout · Germany + ZIP | `GET /v2/prediction?user=1612197&destination=81371_DEU&lang=de` |
 | Checkout · US + ZIP | `GET /v2/prediction?user=1612197&destination=10038_USA&lang=en` |
-| PDP · IP, Germany fallback | `GET /v2/prediction?user=1612197&destination=8.8.8.8&fallbackCountry=DEU&lang=en` |
-| PDP · IP, US fallback | `GET /v2/prediction?user=1612197&destination=8.8.8.8&fallbackCountry=USA&lang=en` |
+| PDP · IP, Germany fallback | `GET /v2/prediction?user=1612197&destination=self&fallbackCountry=DEU&lang=en` |
+| PDP · IP, US fallback | `GET /v2/prediction?user=1612197&destination=self&fallbackCountry=USA&lang=en` |
 | PDP · IPv6, Germany fallback | `GET /v2/prediction?user=1612197&destination=2001:4860:4860::8888&fallbackCountry=DEU&lang=en` |
 
 For an IP response with a ZIP, the preview shows the ZIP and country with the approximate-location icon. A country-only or fallback response shows the country and **Add ZIP**. Select **ZIP required · PDP** to see the ZIP prompt without a delivery date when the response has no ZIP. Select **Minimal PDP** to hide the location row while keeping the estimate.
@@ -233,19 +233,19 @@ IP Fetch remains explicit in the SDK. Set `ipFetch: true` in JavaScript or `data
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
 
-The widget requests the shopper's connection IP from `GET /v2/ip` on the configured `apiBaseUrl` (by default, `https://api.parcellab.com/v2/ip`). The parcelLab API returns `{ "ip": "..." }` with an IPv4 or IPv6 address. The browser has no direct API for its public IP, so parcelLab reads the address from the incoming request. No external IP discovery service is called. The widget sends this value as `destination`, with the configured `destinationCountry` as the ISO3 `fallbackCountry` query parameter. A configured, entered, or saved ZIP takes priority and skips the IP lookup.
+The widget sends `destination=self` to `GET /v2/prediction` on the configured `apiBaseUrl` (by default, `https://api.parcellab.com`). Backend resolves the caller's connection IP and returns its estimated location in that one prediction response. The configured `destinationCountry` supplies the ISO3 `fallbackCountry` parameter. No external IP discovery service or separate IP echo request is called. A configured, entered, or saved ZIP takes priority and skips caller-IP resolution.
 
-Deploy the [Backend public-IP route in PR #52571](https://github.com/parcelLab/Backend/pull/52571) before releasing this widget. A custom API proxy must provide both `/v2/ip` and `/v2/prediction`. If the IP route is unavailable, the widget uses the existing country fallback or ZIP prompt.
+Deploy [Backend `destination=self` support in PR #52571](https://github.com/parcelLab/Backend/pull/52571) before releasing this widget. A custom API proxy only needs `/v2/prediction`, but it must preserve the shopper's IP according to Backend's proxy contract. Otherwise `self` resolves the proxy's connection location. Use an explicit IP or ZIP when calling through a server that cannot preserve that address.
 
 The address version depends on the shopper's network. Both IPv4 and IPv6 are supported by the widget and Backend. In the request URL, IPv6 colons appear as `%3A` because the query value is URL-encoded.
 
-To use a specific address, set `ipAddress: '8.8.8.8'` in JavaScript or `data-ip-address="8.8.8.8"` in HTML, together with IP Fetch. This accepts an IPv4 or IPv6 literal and skips the `/v2/ip` request. Leave it empty to fetch the shopper's public IP. A ZIP or manual country selection still takes priority. Invalid addresses are rejected before a request is sent. `update({ ipAddress: '1.1.1.1' })` clears the previous automatic location and manual-country flag; it resolves the new address when IP Fetch is enabled and no configured or entered ZIP takes priority.
+To use a specific address, set `ipAddress: '8.8.8.8'` in JavaScript or `data-ip-address="8.8.8.8"` in HTML, together with IP Fetch. This accepts an IPv4 or IPv6 literal and sends that address as `destination`. Leave it empty to use `destination=self`. A ZIP or manual country selection still takes priority. Invalid addresses are rejected before a request is sent. `update({ ipAddress: '1.1.1.1' })` clears the previous automatic location and manual-country flag; it resolves the new address when IP Fetch is enabled and no configured or entered ZIP takes priority.
 
 The Promise response supplies `location.country`, `location.region`, and `location.zip`. The widget displays and reuses the returned ZIP and country, even when no prediction is available. The current-location icon marks this automatic selection. Its tooltip and localized accessible label say "Approximate location based on your IP data or default country" because the response does not distinguish IP resolution from country fallback. ZIP values of `null` and `"0"` leave the ZIP picker empty. The country control selects the returned country. If the control is off, automatic selections show the country name next to the ZIP control.
 
-The public IP request has a three-second timeout, disables caching, and omits credentials and the referrer. The Backend also returns `Cache-Control: no-store, no-cache` so shared caches cannot return another shopper's address. If the lookup fails, the widget uses `destinationCountry` with an empty ZIP. If an IP prediction request returns HTTP 404 without a usable location, the widget retries with that same country. A 404 that includes a usable location keeps that location and shows the no-data or static-fallback state. Other API errors use the error or static-fallback state.
+Self prediction requests disable browser and in-memory response caching and omit credentials and the referrer. Backend also returns `Cache-Control: no-store`. If IP resolution fails, Backend uses `fallbackCountry` with an empty ZIP. If an IP prediction request returns HTTP 404 without a usable location, the widget retries with that same country. A 404 that includes a usable location keeps that location and shows the no-data or static-fallback state. Other API errors use the error or static-fallback state.
 
-With the location row visible and `requireZip: true`, IP Fetch runs first; an empty resolved ZIP then requires shopper input. If no ZIP and no usable IP are available, the widget skips the prediction call and shows the ZIP prompt. Public IP values and automatic locations remain in memory and are not saved in local storage.
+With the location row visible and `requireZip: true`, IP Fetch runs first; an empty resolved ZIP then requires shopper input. The initial `self` prediction still runs when `requireZip` is enabled. If its response has no ZIP, the widget shows the ZIP prompt. Automatic locations remain in memory and are not saved in local storage.
 
 `widget.update({ ipFetch: false })` clears the estimate and restores the configured destination. `refresh()` and presentation updates keep the estimate until a shopper or host supplies a destination.
 
@@ -253,7 +253,7 @@ The widget uses `GET /v2/prediction` directly. [Backend PR #52546](https://githu
 
 IP resolution requires `IPAPI_TOKEN` in the Backend runtime, as described in the [Backend geolocation setup](https://github.com/parcelLab/Backend/blob/main/docs/endpoints/prediction-ip-geolocation.md). If the provider is unavailable or the resolved destination is unusable, the Backend can return the configured fallback country with `zip: null`. IP data can also lack a postal code. Check the Backend configuration and geolocation logs when IP requests do not return the expected location.
 
-When enabled without a specified IP, the browser contacts only the configured parcelLab API for IP discovery and prediction. Backend uses ip-api Pro to resolve the location on the server. Allow the configured Promise API origin in your site's CSP `connect-src` directive. A VPN or shared network can return its public exit address, so the location remains approximate.
+When enabled without a specified IP, the browser contacts only the configured parcelLab API for the prediction request and location resolution. Backend uses ip-api Pro to resolve the location on the server. Allow the configured Promise API origin in your site's CSP `connect-src` directive. A VPN or shared network can return its public exit address, so the location remains approximate.
 
 ### IP country fallback
 
@@ -314,7 +314,7 @@ Backend destination contract: [IP geolocation for delivery predictions](https://
 | Parameter | Source | Description |
 |-----------|--------|-------------|
 | `user` | `accountId` config | parcelLab account identifier |
-| `destination` | Destination config or IP Fetch | Postal code and country joined with `_` (for example, `81549_DEU`), country alone (`DEU`), or the fetched IPv4/IPv6 address. A postal code takes priority over IP Fetch. |
+| `destination` | Destination config or IP Fetch | Postal code and country joined with `_` (for example, `81549_DEU`), country alone (`DEU`), `self` for caller-IP resolution, or a specified IPv4/IPv6 address. A postal code takes priority over IP Fetch. |
 | `fallbackCountry` | `destinationCountry` config | ISO3 fallback, sent with every IP destination and omitted for ZIP or country destinations. |
 | `courier` | `courier` config | Filter to a specific logistics provider |
 | `courierServiceLevel` | `serviceLevel` config | Filter to a specific service tier (e.g. `home-delivery`) |
@@ -351,15 +351,15 @@ The current layouts display calendar dates. The API's `min`, `max`, and `likely`
 | `accountId` | `number \| string` | — | **Required.** parcelLab account identifier. |
 | `destinationCountry` | `string` | — | **Required.** ISO 3166-1 alpha-3 country code for manual requests and the IP fallback. |
 | `postalCode` | `string` | — | Destination postal code for more precise estimates. Takes priority over IP Fetch. |
-| `ipFetch` | `boolean` | `false` | Fetch the public IP and use the resolved destination when no postal code is available. |
-| `ipAddress` | `string` | — | Optional IPv4 or IPv6 address to use instead of the public IP lookup. Requires `ipFetch: true`; a ZIP or manual country selection takes priority. |
+| `ipFetch` | `boolean` | `false` | Send `destination=self` and use the resolved location when no postal code is available. |
+| `ipAddress` | `string` | — | Optional IPv4 or IPv6 address to use instead of caller-IP resolution. Requires `ipFetch: true`; a ZIP or manual country selection takes priority. |
 | `courier` | `string` | — | Filter results to a specific courier. |
 | `serviceLevel` | `string` | — | Filter results to a specific service level. |
 | `warehouse` | `string` | — | Specify the shipping origin warehouse. |
 | `calibration` | `'conservative' \| 'balanced' \| 'aggressive'` | — | Prediction confidence model. |
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
-| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Base URL for prediction and public IP lookup. A custom proxy must provide `/v2/prediction` and `/v2/ip` when automatic IP Fetch is enabled. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Base URL for prediction. A custom proxy must support `/v2/prediction` and preserve the shopper IP for `destination=self`. |
 | `layout` | `'text' \| 'card' \| 'badge'` | `'text'` | Layout mode (see below). |
 | `dateMode` | `'from' \| 'on' \| 'by' \| 'range'` | `'from'` | Which delivery date or range to display. |
 | `showCutoff` | `'auto' \| 'always' \| 'never' \| 'express-only'` | `'auto'` | Control the order cutoff line. |
@@ -605,9 +605,9 @@ This uses the current country as the IP fallback and does not delete the saved s
 
 ### Request caching
 
-Successful prediction responses, including empty prediction lists, are cached in memory for the loaded JavaScript module. Widgets share this cache. Its key includes the API origin, account, destination, filters, locale, and any destination IP.
+Successful explicit-destination prediction responses, including empty prediction lists, are cached in memory for the loaded JavaScript module. Widgets share this cache. Its key includes the API origin, account, destination, filters, locale, and any destination IP.
 
-Changing layout, date wording, confidence, or cutoff visibility does not invalidate a matching response. `refresh()` has no cache-bypass option, and the cache has no expiry. The widget does not poll for new dates or cutoff values. A page reload or a newly loaded module starts with an empty widget cache. The demo API panel has a separate cache and refresh control.
+Changing layout, date wording, confidence, or cutoff visibility does not invalidate a matching response. `refresh()` has no cache-bypass option, and the cache has no expiry. The widget does not poll for new dates or cutoff values. A page reload or a newly loaded module starts with an empty widget cache. The demo API panel has a separate cache and refresh control. Both caches exclude `destination=self` requests. Once a location resolves, refresh uses its explicit ZIP or country and can reuse that explicit-destination cache.
 
 ## Development
 
@@ -623,7 +623,7 @@ The demo starts with **PDP · IP (Germany fallback)** and **Standard PDP**. The 
 
 In IP mode, enter an optional **IP address** to test a specific IPv4 or IPv6 address. The preview, API panel, sample request, and generated embed use that address. Leave it empty to use your public IP. Choosing a data preset clears the specified IP.
 
-Every demo control is read from and written to URL query parameters. Copy the address bar URL to share a configuration; opening it restores the data, presentation, preset selection, HTML/JavaScript embed tab, and API panel visibility. The URL stores specified inputs, including a supplied IP or ZIP; it does not add the automatically fetched IP or resolved location.
+Every demo control is read from and written to URL query parameters. Copy the address bar URL to share a configuration; opening it restores the data, presentation, preset selection, HTML/JavaScript embed tab, and API panel visibility. The URL stores specified inputs, including a supplied IP or ZIP; it does not add the caller IP or resolved location.
 
 | Query keys | Values |
 |------------|--------|
@@ -647,9 +647,9 @@ For example, open `http://localhost:4174/?locationMode=ip&country=DEU&ipAddress=
 
 The **Inline (PDP, cart)** layout uses `layout: 'text'`. Generated embed script URLs are relative to the demo's origin and directory. A local demo therefore shows `http://localhost:4174/dist/promise.iife.js`; a hosted demo uses its own hosted bundle. Use the CDN URL from [Recommended usage](#recommended-usage) for a production embed.
 
-Data preset labels identify PDP and checkout use cases. Hover over a preset for a short explanation. The **Sample request** below the data presets shows the configured query, including any filters. In public-IP mode, `8.8.8.8` is an example; a specified IP appears as entered.
+Data preset labels identify PDP and checkout use cases. Hover over a preset for a short explanation. The **Sample request** below the data presets shows the configured query, including any filters. In automatic IP mode, the sample uses `destination=self`; a specified IP appears as entered.
 
-**Show API response** makes a separate request from the demo controls and displays its request URL, status, and raw body. In public-IP mode, the panel performs its own lookup. It does not read the widget's saved or manually corrected location, so its response can differ from the preview. Its cache is separate from the widget cache; the panel's refresh button bypasses only the panel cache. To compare a particular corrected destination, enter its ZIP and country in the Data controls.
+**Show API response** makes a separate request from the demo controls and displays its request URL, status, and raw body. In automatic IP mode, the panel sends its own prediction request with `destination=self` and `fallbackCountry`. It does not read the widget's saved or manually corrected location, so its response can differ from the preview. Its cache is separate from the widget cache; the panel's refresh button bypasses only the panel cache. To compare a particular corrected destination, enter its ZIP and country in the Data controls.
 
 | Presentation preset | Behavior |
 |---------------------|----------|
