@@ -232,7 +232,6 @@ export interface PredictionDetail {
   min: number;
   max: number;
   likely: number;
-  send_date: string;
   earliest: string;
   latest: string;
   mostLikely: string;

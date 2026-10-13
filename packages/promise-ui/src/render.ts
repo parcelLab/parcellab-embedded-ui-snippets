@@ -1040,7 +1040,7 @@ export class WidgetRenderer {
       select.setAttribute('aria-label', config.messages.deliveryCountry);
       const countries = getCountries(config.locale);
       if (!countries.some(({ code }) => code === config.destinationCountry)) {
-        countries.unshift({ code: config.destinationCountry, name: config.destinationCountry });
+        select.add(new Option(config.destinationCountry, config.destinationCountry, false, true));
       }
       for (const { code, name } of countries) {
         select.add(new Option(name, code, false, code === config.destinationCountry));

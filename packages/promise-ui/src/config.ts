@@ -1,5 +1,5 @@
 import { getMessages } from './messages';
-import { isIpAddress } from './api';
+import { isIpAddress } from './ip';
 import type {
   CarrierDisplay,
   Confidence,

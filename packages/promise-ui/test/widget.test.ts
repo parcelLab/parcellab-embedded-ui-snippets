@@ -20,7 +20,6 @@ function makePrediction(overrides: Record<string, unknown> = {}) {
       min: 1,
       max: 3,
       likely: 2,
-      send_date: '2026-04-12',
       earliest: '2026-04-13',
       latest: '2026-04-15',
       mostLikely: '2026-04-14',
@@ -44,7 +43,6 @@ function expressPrediction() {
       min: 1,
       max: 1,
       likely: 1,
-      send_date: '2026-04-12',
       earliest: '2026-04-13',
       latest: '2026-04-13',
       mostLikely: '2026-04-13',
@@ -148,7 +146,6 @@ describe('DeliveryPromise Widget', () => {
     const prediction = makePrediction({
       prediction: {
         min: 1, max: 3, likely: 2,
-        send_date: iso(twoDaysAgo),
         earliest: iso(twoDaysAgo),
         latest: iso(yesterday),
         mostLikely: iso(yesterday),

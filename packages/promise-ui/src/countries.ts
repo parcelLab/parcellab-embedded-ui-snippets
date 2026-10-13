@@ -27,7 +27,11 @@ UGA:UG UKR:UA UMI:UM URY:UY USA:US UZB:UZ VAT:VA VCT:VC VEN:VE VGB:VG
 VIR:VI VNM:VN VUT:VU WLF:WF WSM:WS XKX:XK YEM:YE ZAF:ZA ZMB:ZM ZWE:ZW
 `.trim().split(/\s+/).map((pair) => pair.split(':') as [string, string]);
 
-export function getCountries(locale: string): { code: string; name: string }[] {
+const countryCache = new Map<string, readonly { code: string; name: string }[]>();
+
+export function getCountries(locale: string): readonly { code: string; name: string }[] {
+  const cached = countryCache.get(locale);
+  if (cached) return cached;
   // shortcut: Browsers without Intl.DisplayNames show codes; add a polyfill if names are required there.
   let names: Intl.DisplayNames | undefined;
   try {
@@ -35,8 +39,10 @@ export function getCountries(locale: string): { code: string; name: string }[] {
   } catch {
     if (Intl.DisplayNames) names = new Intl.DisplayNames(['en'], { type: 'region' });
   }
-  return COUNTRY_CODES.map(([code, alpha2]) => ({
+  const countries = COUNTRY_CODES.map(([code, alpha2]) => ({
     code,
     name: names?.of(alpha2) ?? code,
   })).sort((a, b) => a.name.localeCompare(b.name));
+  countryCache.set(locale, countries);
+  return countries;
 }
