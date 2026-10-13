@@ -32,7 +32,7 @@ Open `http://localhost:4174/` for the demo. Use the HTTP server instead of openi
 
 Both demos serve their CSS locally. They do not load a CSS framework from an external CDN. If you change utility classes, regenerate the package's `dev/styles.css` with Tailwind CSS 3.4.19, using `dev/tailwind.config.cjs` and `dev/styles.input.css`. Retain the license header. The site build copies this stylesheet with the demo.
 
-Widget API URLs must use HTTPS on `parcellab.com` or `parcellab.dev`, including subdomains. Both widgets reject other hosts, embedded credentials, and API redirects. Check these restrictions when changing a request path or configuration option.
+Keep default API calls on the parcelLab API. Do not add external lookup services or CDN scripts. The existing `apiBaseUrl` option remains an integration override; it has no domain allowlist.
 
 Check ZIP + country, country-only, and IP + fallback country requests with the [data presets and sample requests](./packages/promise-ui/README.md#sample-requests). `destinationCountry` is the only country setting and supplies the fallback for every IP request. IP Fetch supports IPv4 and IPv6 and is off unless enabled. The widget and demo send `destination=self` to `/v2/prediction` when no IP is specified. [Backend #52571](https://github.com/parcelLab/Backend/pull/52571) must be deployed for automatic resolution. Verify that each automatic request uses this destination and sends the configured country as `fallbackCountry`. No separate IP discovery request is used.
 

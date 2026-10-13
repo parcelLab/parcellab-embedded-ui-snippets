@@ -47,7 +47,6 @@ export async function fetchRecommendation(
   try {
     response = await fetch(url.toString(), {
       method: 'GET',
-      redirect: 'error',
       headers: {
         Accept: 'application/json',
       },

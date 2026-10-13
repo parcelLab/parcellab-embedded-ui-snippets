@@ -359,7 +359,7 @@ The current layouts display calendar dates. The API's `min`, `max`, and `likely`
 | `calibration` | `'conservative' \| 'balanced' \| 'aggressive'` | — | Prediction confidence model. |
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
-| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | HTTPS API URL on `parcellab.com` or `parcellab.dev`, including their subdomains. Other hosts and embedded credentials are rejected before a request. Redirects are rejected. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Override the API base URL. Defaults to the parcelLab API. |
 | `layout` | `'text' \| 'card' \| 'badge'` | `'text'` | Layout mode (see below). |
 | `dateMode` | `'from' \| 'on' \| 'by' \| 'range'` | `'from'` | Which delivery date or range to display. |
 | `showCutoff` | `'auto' \| 'always' \| 'never' \| 'express-only'` | `'auto'` | Control the order cutoff line. |
