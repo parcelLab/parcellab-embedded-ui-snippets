@@ -82,6 +82,7 @@ export async function fetchPrediction(
   try {
     response = await fetch(url.toString(), {
       method: 'GET',
+      redirect: 'error',
       headers: {
         Accept: 'application/json',
       },

@@ -21,6 +21,15 @@ import type {
 
 const DEFAULT_API_BASE_URL = 'https://api.parcellab.com';
 
+function resolveApiBaseUrl(value = DEFAULT_API_BASE_URL): string {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password ||
+      !['parcellab.com', 'parcellab.dev'].some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`))) {
+    throw new Error('apiBaseUrl must use an HTTPS parcelLab domain.');
+  }
+  return value.replace(/\/$/, '');
+}
+
 const DEFAULT_EXPRESS_SERVICE_LEVELS = [
   'express',
   'expedited',
@@ -229,7 +238,7 @@ export function resolveConfig(
 
     locale,
     messages,
-    apiBaseUrl: (config.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/, ''),
+    apiBaseUrl: resolveApiBaseUrl(config.apiBaseUrl),
     theme: config.theme ?? {},
     className: config.className?.trim() ?? '',
     expressServiceLevels: (

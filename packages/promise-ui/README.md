@@ -359,7 +359,7 @@ The current layouts display calendar dates. The API's `min`, `max`, and `likely`
 | `calibration` | `'conservative' \| 'balanced' \| 'aggressive'` | — | Prediction confidence model. |
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
-| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Base URL for prediction. A custom proxy must support `/v2/prediction` and preserve the shopper IP for `destination=self`. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | HTTPS API URL on `parcellab.com` or `parcellab.dev`, including their subdomains. Other hosts and embedded credentials are rejected before a request. Redirects are rejected. |
 | `layout` | `'text' \| 'card' \| 'badge'` | `'text'` | Layout mode (see below). |
 | `dateMode` | `'from' \| 'on' \| 'by' \| 'range'` | `'from'` | Which delivery date or range to display. |
 | `showCutoff` | `'auto' \| 'always' \| 'never' \| 'express-only'` | `'auto'` | Control the order cutoff line. |

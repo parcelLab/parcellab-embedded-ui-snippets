@@ -13,6 +13,15 @@ import type {
 const DEFAULT_API_BASE_URL =
   'https://api.parcellab.com';
 
+function resolveApiBaseUrl(value = DEFAULT_API_BASE_URL): string {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password ||
+      !['parcellab.com', 'parcellab.dev'].some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`))) {
+    throw new Error('apiBaseUrl must use an HTTPS parcelLab domain.');
+  }
+  return value.replace(/\/$/, '');
+}
+
 function resolveTarget(target: WidgetInitOptions['target']): HTMLElement {
   if (typeof target === 'string') {
     const element = document.querySelector<HTMLElement>(target);
@@ -87,7 +96,7 @@ export function resolveConfig(
       : config.notFoundMode === 'hidden'
         ? 'hidden'
         : 'true-to-size',
-    apiBaseUrl: (config.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/$/, ''),
+    apiBaseUrl: resolveApiBaseUrl(config.apiBaseUrl),
     appearance: parseAppearance(config.appearance),
     density: parseDensity(config.density),
     surface: parseSurface(config.surface),

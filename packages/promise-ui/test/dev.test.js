@@ -108,7 +108,7 @@ describe('Promise demo data presets', () => {
     reloadDemo();
     await vi.waitFor(() => expect(document.querySelector('#api-response').textContent).toContain('success'));
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error' });
     const prediction = new URL(fetchMock.mock.calls[0][0]);
     expect(prediction.pathname).toBe('/v2/prediction');
     expect(prediction.searchParams.get('destination')).toBe('self');

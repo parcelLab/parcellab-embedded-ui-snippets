@@ -129,7 +129,7 @@ Full API documentation: [Size Recommender API Reference](https://api.parcellab.c
 | `locale` | `string` | `'en'` | Language for default messages. Supported: `en`, `de`, `fr`, `it`, `es`. |
 | `messages` | `Partial<WidgetMessages>` | — | Override any default message string. |
 | `notFoundMode` | `'empty' \| 'true-to-size' \| 'hidden'` | `'empty'` | Behavior when the API returns 404. `hidden` hides the widget entirely. |
-| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | Override the API base URL. |
+| `apiBaseUrl` | `string` | `'https://api.parcellab.com'` | HTTPS API URL on `parcellab.com` or `parcellab.dev`, including their subdomains. Other hosts and embedded credentials are rejected before a request. Redirects are rejected. |
 | `appearance` | `'neutral' \| 'colored'` | `'neutral'` | `neutral` is grayscale; `colored` uses gradient track. |
 | `density` | `'compact' \| 'comfortable'` | `'compact'` | `compact` suits PDP sidebars; `comfortable` adds more spacing. |
 | `surface` | `'subtle' \| 'plain'` | `'subtle'` | `subtle` renders a light card; `plain` renders inline. |

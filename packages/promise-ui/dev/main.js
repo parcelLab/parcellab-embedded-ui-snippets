@@ -525,6 +525,7 @@ async function updateApiPanel({ bypassCache = false } = {}) {
   try {
     response = await fetch(url, {
       method: 'GET',
+      redirect: 'error',
       headers: { Accept: 'application/json' },
       signal,
       ...(selfRequest ? { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' } : {}),
