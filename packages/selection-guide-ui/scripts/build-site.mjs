@@ -15,3 +15,4 @@ await cp(path.join(cwd, 'dist', 'size-recommender.iife.js'), path.join(distDir, 
 await cp(path.join(cwd, 'dist', 'size-recommender.esm.js'), path.join(distDir, 'size-recommender.esm.js'));
 await cp(path.join(cwd, 'dev', 'index.html'), path.join(siteDir, 'index.html'));
 await cp(path.join(cwd, 'dev', 'main.js'), path.join(devDir, 'main.js'));
+await cp(path.join(cwd, 'dev', 'styles.css'), path.join(devDir, 'styles.css'));

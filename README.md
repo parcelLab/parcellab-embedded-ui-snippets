@@ -21,12 +21,21 @@ Size recommendation widget for product detail pages. Renders fit guidance — ca
 
 ### [Promise UI](./packages/promise-ui/)
 
-Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency — powered by the [parcelLab Promise API](https://docs.parcellab.com/docs/developers/promise/api).
+Delivery promise widget for product and checkout pages. Shows estimated delivery dates, courier options, and order cutoff urgency, powered by the [parcelLab Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates). Optional IP Fetch estimates the destination before a shopper enters a postal code.
 
 ```html
-<div data-promise data-account-id="YOUR_ACCOUNT_ID" data-country="DEU"></div>
+<div
+  data-promise
+  data-account-id="YOUR_ACCOUNT_ID"
+  data-country="DEU"
+  data-ip-fetch="true"
+  data-zip-picker="inline"
+  data-country-picker="true"
+></div>
 <script src="https://cdn.parcellab.com/js/promise-ui/v1/promise.iife.js" defer></script>
 ```
+
+IP Fetch is off unless enabled. It sends `destination=self` to parcelLab's `/v2/prediction` route to resolve the caller's location in one request. Deploy [Backend #52571](https://github.com/parcelLab/Backend/pull/52571) before releasing the widget. The single country setting supplies the manual destination country and the fallback for IP requests. The response fills the ZIP and country controls, with an icon for the approximate location. Shopper changes to ZIP and country are saved in browser local storage for 30 days after the last change and reused when the page supplies no ZIP. The widget displays one selected delivery method. It does not create or send a visitor ID. See the [PDP and checkout recommendations](./packages/promise-ui/README.md#recommended-usage) and the full [UI behavior and configuration](./packages/promise-ui/README.md#configuration).
 
 [Source](./packages/promise-ui/) · [Docs](./packages/promise-ui/README.md) · [Live demo](https://cdn.parcellab.com/playground/promise-ui/index.html)
 
@@ -43,6 +52,8 @@ npm test             # Run all tests
 npm run dev:selection-guide   # → localhost:4173
 npm run dev:promise           # → localhost:4174
 ```
+
+Open the Promise UI demo at `http://localhost:4174/`. Serve the demo over HTTP; opening `dev/index.html` with `file://` does not load the widget correctly. The demo starts with IP Fetch, a Germany fallback, and the Standard PDP presentation. Its data presets show sample requests. The API response panel makes a separate request from the controls; saved or manually corrected preview locations can differ. All controls are saved in the URL so you can share a configuration, including an optional specified IP address. See the [demo behavior](./packages/promise-ui/README.md#development) and [request cache limits](./packages/promise-ui/README.md#request-caching).
 
 ### Package layout
 
@@ -81,7 +92,7 @@ Bundles are distributed via S3 + CloudFront. GitHub Actions handle everything:
 
 These widgets are open-source reference implementations. If you need a custom integration:
 
-1. **Use the APIs directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API](https://docs.parcellab.com/docs/developers/promise/api) from your own frontend and render the response however you like
+1. **Use the APIs directly** — call the [Size Recommender API](https://api.parcellab.com/v4/docs/#tag/Size-Recommender) or [Promise API v2](https://docs.parcellab.com/docs/developers/v2/promise/promise-dates) from your own frontend and render the response however you like
 2. **Fork and customize** — start from this codebase and modify the rendering, styling, and behavior to match your design system
 3. **Use as a library** — import the ESM build and override messages, theme, and CSS to fit your needs
 

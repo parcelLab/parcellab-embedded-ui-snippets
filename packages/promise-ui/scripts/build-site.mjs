@@ -15,3 +15,4 @@ await cp(path.join(cwd, 'dist', 'promise.iife.js'), path.join(distDir, 'promise.
 await cp(path.join(cwd, 'dist', 'promise.esm.js'), path.join(distDir, 'promise.esm.js'));
 await cp(path.join(cwd, 'dev', 'index.html'), path.join(siteDir, 'index.html'));
 await cp(path.join(cwd, 'dev', 'main.js'), path.join(devDir, 'main.js'));
+await cp(path.join(cwd, 'dev', 'styles.css'), path.join(devDir, 'styles.css'));

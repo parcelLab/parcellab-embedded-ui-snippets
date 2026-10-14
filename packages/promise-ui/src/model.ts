@@ -198,7 +198,7 @@ function mapPrediction(
   const p = entry.prediction;
   const cutoffUrgency = classifyCutoffUrgency(p.cutoff);
   const isExpress = isExpressService(
-    entry.courier_service_level ?? [],
+    entry.courierServiceLevel ?? [],
     entry.id,
     config.expressServiceLevels,
   );
@@ -221,27 +221,27 @@ function mapPrediction(
     messages: config.messages,
   };
 
-  const earliestDisplay = formatDate(p.earliest_date, p.earliest_locale, formatOpts);
-  const latestDisplay = formatDate(p.latest_date, p.latest_locale, formatOpts);
-  const mostLikelyDisplay = formatDate(p.most_likely_date, p.most_likely_locale, formatOpts);
+  const earliestDisplay = formatDate(p.earliest, p.earliestLocale, formatOpts);
+  const latestDisplay = formatDate(p.latest, p.latestLocale, formatOpts);
+  const mostLikelyDisplay = formatDate(p.mostLikely, p.mostLikelyLocale, formatOpts);
 
   const cutoffSentence = interpolate(config.messages.cutoffSentence, {
-    cutoff: p.cutoff_locale,
+    cutoff: p.cutoffLocale,
   });
 
   return {
     id: entry.id,
     courier: entry.courier,
-    courierName: entry.courier_name || entry.courier,
-    serviceLevels: entry.courier_service_level ?? [],
+    courierName: entry.courierName || entry.courier,
+    serviceLevels: entry.courierServiceLevel ?? [],
     earliestDate: earliestDisplay,
     latestDate: latestDisplay,
     mostLikelyDate: mostLikelyDisplay,
-    earliestIso: p.earliest_date,
-    latestIso: p.latest_date,
-    mostLikelyIso: p.most_likely_date,
+    earliestIso: p.earliest,
+    latestIso: p.latest,
+    mostLikelyIso: p.mostLikely,
     cutoffMinutes: p.cutoff,
-    cutoffText: p.cutoff_locale,
+    cutoffText: p.cutoffLocale,
     cutoffUrgency,
     cutoffSentence,
     isExpress,
@@ -330,6 +330,7 @@ function buildSummary(
 export function readyViewModel(
   response: PromiseApiResponse,
   config: ResolvedWidgetConfig,
+  locationEstimated = false,
 ): ViewModel {
   const predictions = response.prediction
     .slice(0, config.maxPredictions)
@@ -350,6 +351,7 @@ export function readyViewModel(
     summaryDateText: dateText,
     postalCode: config.postalCode,
     country: config.destinationCountry,
+    locationEstimated,
   };
 }
 

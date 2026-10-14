@@ -4,34 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Promise UI — Dev Demo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              navy: {
-                50: '#f5f7fa',
-                100: '#eaeef4',
-                200: '#d4dcea',
-                300: '#a8b8d0',
-                400: '#7a93b4',
-                500: '#41536f',
-                600: '#2d3e58',
-                700: '#1e2f48',
-                800: '#10203c',
-                900: '#0b1729',
-              },
-              brand: {
-                DEFAULT: '#3D3AD3',
-                light: '#ededfc',
-                dark: '#2e2ba5',
-              },
-            },
-          },
-        },
-      };
-    </script>
+    <link rel="stylesheet" href="./dev/styles.css" />
     <style>
       body {
         font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -95,7 +68,7 @@
       <header class="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 class="text-xl font-semibold">Promise UI — Dev Demo</h1>
-          <p class="text-sm text-navy-500 mt-1">Delivery date widget for product, cart, and checkout surfaces. Toned-down by default.</p>
+          <p class="text-sm text-navy-500 mt-1">Delivery estimates with IP location and country fallback. Compare product, cart, and checkout layouts.</p>
         </div>
         <button id="toggle-api-panel" type="button" aria-pressed="false"
           class="api-toggle text-xs font-semibold px-3 h-9 rounded-lg border border-navy-200 bg-white text-navy-500 hover:bg-navy-50 transition-colors cursor-pointer self-center whitespace-nowrap">
@@ -111,6 +84,11 @@
             <h2 class="text-base font-semibold mb-3">Data</h2>
             <div class="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-2">Data presets</div>
             <div id="data-preset-list" class="flex flex-wrap gap-2"></div>
+            <div class="mt-3 space-y-1.5">
+              <h3 class="text-xs font-semibold text-navy-500 uppercase tracking-wide">Sample request</h3>
+              <code id="sample-request" class="api-mono block bg-navy-50 border border-navy-200/60 rounded-lg p-3 break-all text-navy-700"></code>
+              <p id="sample-request-note" class="text-[0.78rem] text-navy-400 leading-snug"></p>
+            </div>
           </div>
 
           <fieldset class="space-y-2">
@@ -120,13 +98,26 @@
               <input id="account-id" value="1612197" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
             <label class="field-row">
+              Location request
+              <select id="location-mode" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+                <option value="postal">ZIP + country</option>
+                <option value="country">Country only</option>
+                <option value="ip" selected>IP Fetch + fallback country</option>
+              </select>
+            </label>
+            <label class="field-row" id="country-field">
               Country (ISO3)
               <input id="country" value="DEU" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
-            <label class="field-row">
-              Postal code (optional)
-              <input id="postal-code" value="" placeholder="Leave empty for country-level" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
+            <label class="field-row" id="postal-code-field">
+              Postal code
+              <input id="postal-code" value="" placeholder="For example, 81549" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
             </label>
+            <label class="field-row" id="ip-address-field">
+              IP address (optional)
+              <input id="ip-address" value="" placeholder="Resolve connection IP" spellcheck="false" class="bg-white border border-navy-200 rounded-lg h-10 px-3" />
+            </label>
+            <p id="ip-fetch-hint" class="text-[0.78rem] text-navy-400 leading-snug">Leave the IP empty to resolve your connection location, or enter an IPv4 or IPv6 address. The country above is the fallback if resolution fails or no delivery method matches.</p>
           </fieldset>
 
           <fieldset class="space-y-2">
@@ -180,7 +171,7 @@
           <label class="field-row">
             Layout
             <select id="layout" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
-              <option value="text" selected>Text · single line (PDP, cart)</option>
+              <option value="text" selected>Inline (PDP, cart)</option>
               <option value="card">Card · prominent (PDP hero)</option>
               <option value="badge">Badge · compact pill</option>
             </select>
@@ -234,10 +225,10 @@
           </label>
 
           <label class="field-row">
-            Zip picker
+            Location picker
             <select id="zip-picker" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
-              <option value="none" selected>None</option>
-              <option value="inline">Inline editable</option>
+              <option value="none" selected>Hidden</option>
+              <option value="inline">ZIP picker</option>
             </select>
           </label>
 
@@ -245,7 +236,15 @@
             No-zip behavior
             <select id="require-zip" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
               <option value="false" selected>Use country-level estimate</option>
-              <option value="true">Show CTA link only</option>
+              <option value="true">Require ZIP</option>
+            </select>
+          </label>
+
+          <label class="field-row">
+            Country picker
+            <select id="country-picker" class="field bg-white border border-navy-200 rounded-lg h-10 px-3">
+              <option value="false" selected>Hidden</option>
+              <option value="true">Inline country name</option>
             </select>
           </label>
 
